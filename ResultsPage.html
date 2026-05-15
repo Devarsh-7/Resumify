@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Analysis Results - Resumify AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-fixed-dim": "#d2bbff",
+              "on-primary-fixed-variant": "#3323cc",
+              "inverse-primary": "#c3c0ff",
+              "on-error-container": "#93000a",
+              "on-tertiary-container": "#b8e0ff",
+              "tertiary-container": "#006693",
+              "error-container": "#ffdad6",
+              "error": "#ba1a1a",
+              "on-background": "#191c1e",
+              "primary-fixed-dim": "#c3c0ff",
+              "primary-container": "#4f46e5",
+              "surface-bright": "#f7f9fb",
+              "secondary-container": "#8a4cfc",
+              "on-secondary-container": "#fffbff",
+              "on-secondary": "#ffffff",
+              "secondary-fixed": "#eaddff",
+              "on-surface-variant": "#464555",
+              "surface-container-low": "#f2f4f6",
+              "on-tertiary-fixed-variant": "#004c6e",
+              "surface-container-high": "#e6e8ea",
+              "outline": "#777587",
+              "outline-variant": "#c7c4d8",
+              "on-primary-container": "#dad7ff",
+              "surface-container-highest": "#e0e3e5",
+              "on-error": "#ffffff",
+              "surface-container": "#eceef0",
+              "primary-fixed": "#e2dfff",
+              "inverse-on-surface": "#eff1f3",
+              "secondary": "#712ae2",
+              "surface-dim": "#d8dadc",
+              "tertiary": "#004d70",
+              "tertiary-fixed": "#c9e6ff",
+              "tertiary-fixed-dim": "#89ceff",
+              "on-tertiary-fixed": "#001e2f",
+              "surface-variant": "#e0e3e5",
+              "surface-tint": "#4d44e3",
+              "surface": "#f7f9fb",
+              "on-secondary-fixed": "#25005a",
+              "on-primary": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "on-primary-fixed": "#0f0069",
+              "primary": "#3525cd",
+              "on-surface": "#191c1e",
+              "inverse-surface": "#2d3133",
+              "background": "#f7f9fb",
+              "on-secondary-fixed-variant": "#5a00c6",
+              "surface-container-lowest": "#ffffff"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .circular-progress {
+            background: conic-gradient(from 0deg, #3525cd 0% 85%, #e0e3e5 85% 100%);
+        }
+        .mask-inner {
+            mask: radial-gradient(circle, transparent 65%, black 66%);
+            -webkit-mask: radial-gradient(circle, transparent 65%, black 66%);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-screen w-64 bg-slate-50 border-r-0 font-manrope text-sm font-medium p-4 gap-2 sticky top-0 shadow-none">
+<div class="flex items-center gap-3 px-2 mb-8">
+<div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-xl">insights</span>
+</div>
+<div class="flex flex-col">
+<span class="text-xl font-bold text-slate-900 leading-none">Resumify AI</span>
+<span class="text-[10px] text-primary font-bold tracking-widest uppercase">AI Analyst Mode</span>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-transform hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-indigo-600 font-bold bg-white rounded-lg shadow-sm" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span>My Resumes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-transform hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-transform hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span>Profile</span>
+</a>
+</nav>
+<div class="mt-auto flex flex-col gap-2 border-t border-slate-200 pt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-transform hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Help</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-transform hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</aside>
+<div class="flex-1 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-white/80 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined md:hidden text-on-surface">menu</span>
+<h1 class="text-2xl font-black text-slate-900 tracking-tight font-headline">Analysis Results</h1>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex items-center gap-6 font-manrope tracking-tight font-semibold">
+<a class="text-slate-500 hover:text-indigo-500 transition-all duration-300" href="#">Features</a>
+<a class="text-slate-500 hover:text-indigo-500 transition-all duration-300" href="#">Pricing</a>
+<a class="text-slate-500 hover:text-indigo-500 transition-all duration-300" href="#">How it Works</a>
+</div>
+<div class="h-10 w-10 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
+<img class="w-full h-full object-cover" data-alt="professional headshot of a smiling business professional with soft natural lighting and blurred office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSH5farPqmsNZQLjncg_QpHh7ozIUoClZcuRMccm6Vo9p1e-o0GqLpHiTgy-LHtjNnuMHnRIf-sJxCbZlxuCOqHfDtyxXBuoljbNiA-V-NbB6L88wxfWCS9fqefn07rf6FrwcwJyRvB-ry5i_wHePoIglVM4XaoL4In8Os7Ug2kEK8ZnLAm_PklTQ_zd4K5n8XLnPgD6HUPb7eSwDiYjTUzVKc1f5sJPcT2CtD1fl8y4q9HZdk7TDM-MxtUngOMWb9pdWEAw_K4UQX"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 p-8 md:p-12 max-w-7xl mx-auto w-full">
+<!-- Hero Analysis Section: Intentional Asymmetry -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16 items-center">
+<div class="lg:col-span-7">
+<span class="inline-block px-4 py-1.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-semibold text-xs mb-4 tracking-wider uppercase">Analysis Complete</span>
+<h2 class="text-5xl md:text-6xl font-headline font-extrabold text-on-surface tracking-tight leading-tight mb-6">
+                        Your resume is in the <span class="text-primary italic">top 15%</span> of applicants.
+                    </h2>
+<p class="text-lg text-on-surface-variant max-w-xl leading-relaxed mb-8">
+                        Our AI analyst has cross-referenced your profile against 5,000+ successful placements in Senior Product Design. Here's how you can bridge the final gap.
+                    </p>
+<div class="flex gap-4">
+<button class="bg-gradient-to-r from-primary to-primary-container text-white px-8 py-4 rounded-lg font-bold shadow-lg hover:shadow-primary/20 transition-all active:scale-95">
+                            Download Optimized PDF
+                        </button>
+<button class="bg-surface-container-lowest text-primary px-8 py-4 rounded-lg font-bold shadow-sm border border-outline-variant/10 hover:bg-surface-container-low transition-all">
+                            View Full Report
+                        </button>
+</div>
+</div>
+<div class="lg:col-span-5 flex justify-center lg:justify-end">
+<div class="relative group">
+<!-- Glassmorphism Container -->
+<div class="absolute inset-0 bg-secondary/10 blur-3xl rounded-full scale-110"></div>
+<div class="relative bg-white/80 backdrop-blur-md p-10 rounded-3xl shadow-2xl border border-white/50 flex flex-col items-center">
+<div class="relative w-48 h-48 flex items-center justify-center">
+<!-- Score Progress -->
+<div class="absolute inset-0 rounded-full circular-progress"></div>
+<div class="absolute inset-2 bg-white rounded-full flex flex-col items-center justify-center">
+<span class="text-6xl font-black text-on-surface leading-none">85</span>
+<span class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">ATS Score</span>
+</div>
+</div>
+<div class="mt-8 text-center">
+<div class="flex items-center gap-2 text-green-600 font-bold mb-1 justify-center">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">expand_less</span>
+<span>+12 pts from last week</span>
+</div>
+<p class="text-sm text-on-surface-variant font-medium">Status: Interview Ready</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Bento Grid Breakdown -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+<!-- Score Breakdown Card -->
+<div class="md:col-span-2 bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-xl font-bold font-headline">Structural Breakdown</h3>
+<span class="material-symbols-outlined text-primary-container">analytics</span>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between items-center text-sm font-semibold">
+<span class="text-on-surface">Formatting &amp; Parsing</span>
+<span class="text-primary">98%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[98%] rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center text-sm font-semibold">
+<span class="text-on-surface">Keyword Optimization</span>
+<span class="text-primary">72%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[72%] rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center text-sm font-semibold">
+<span class="text-on-surface">Impact Metrics</span>
+<span class="text-primary">85%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[85%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Missing Skills Card -->
+<div class="bg-surface-container-low p-8 rounded-xl flex flex-col">
+<h3 class="text-xl font-bold font-headline mb-6">Gap Analysis</h3>
+<p class="text-sm text-on-surface-variant mb-6 leading-relaxed">Add these top-tier keywords to increase your visibility for Lead roles.</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1.5 bg-white rounded-full text-xs font-bold text-on-surface-variant border border-outline-variant/30">System Thinking</span>
+<span class="px-3 py-1.5 bg-white rounded-full text-xs font-bold text-on-surface-variant border border-outline-variant/30">Stakeholder Mgmt</span>
+<span class="px-3 py-1.5 bg-white rounded-full text-xs font-bold text-primary border border-primary/20">A/B Testing</span>
+<span class="px-3 py-1.5 bg-white rounded-full text-xs font-bold text-on-surface-variant border border-outline-variant/30">SaaS Metrics</span>
+<span class="px-3 py-1.5 bg-white rounded-full text-xs font-bold text-secondary border border-secondary/20">Figma Vars</span>
+</div>
+<button class="mt-auto w-full py-3 text-sm font-bold text-primary hover:bg-white rounded-lg transition-colors">
+                        Auto-Insert Keywords
+                    </button>
+</div>
+</section>
+<!-- AI Suggestions: The Editorial List -->
+<section class="bg-white rounded-3xl p-10 shadow-sm border border-outline-variant/5">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+<div>
+<h3 class="text-3xl font-headline font-extrabold mb-2">AI Suggestions</h3>
+<p class="text-on-surface-variant">Prioritized improvements based on current market trends.</p>
+</div>
+<div class="flex items-center gap-2 text-primary font-bold bg-primary/5 px-4 py-2 rounded-full text-sm">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span>Analyst Mode Active</span>
+</div>
+</div>
+<div class="space-y-0">
+<!-- Suggestion Item -->
+<div class="group py-8 flex flex-col md:flex-row gap-8 items-start hover:bg-slate-50/50 transition-colors rounded-2xl px-4 -mx-4">
+<div class="w-12 h-12 rounded-xl bg-secondary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-secondary-fixed">edit_note</span>
+</div>
+<div class="flex-1">
+<h4 class="text-lg font-bold mb-2">Quantify your UX results</h4>
+<p class="text-on-surface-variant leading-relaxed">Your "Senior Designer" role at Meta lacks concrete numbers. Instead of "Improved workflow," use "Redesigned checkout flow resulting in a 24% reduction in drop-off rates."</p>
+</div>
+<div class="shrink-0 flex gap-2">
+<button class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-outline-variant/20 transition-all text-slate-400 hover:text-primary">
+<span class="material-symbols-outlined">refresh</span>
+</button>
+<button class="px-4 py-2 bg-surface-container-high rounded-lg text-xs font-bold hover:bg-surface-container-highest transition-all">Apply Fix</button>
+</div>
+</div>
+<!-- Suggestion Item -->
+<div class="group py-8 flex flex-col md:flex-row gap-8 items-start border-t border-slate-100 hover:bg-slate-50/50 transition-colors rounded-2xl px-4 -mx-4">
+<div class="w-12 h-12 rounded-xl bg-primary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary-fixed">mobile_layout</span>
+</div>
+<div class="flex-1">
+<h4 class="text-lg font-bold mb-2">Simplify Header Formatting</h4>
+<p class="text-on-surface-variant leading-relaxed">The multi-column layout for your contact info might confuse older ATS systems. Move all contact links to a single row below your name.</p>
+</div>
+<div class="shrink-0 flex gap-2">
+<button class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-outline-variant/20 transition-all text-slate-400 hover:text-primary">
+<span class="material-symbols-outlined">refresh</span>
+</button>
+<button class="px-4 py-2 bg-surface-container-high rounded-lg text-xs font-bold hover:bg-surface-container-highest transition-all">Apply Fix</button>
+</div>
+</div>
+<!-- Suggestion Item -->
+<div class="group py-8 flex flex-col md:flex-row gap-8 items-start border-t border-slate-100 hover:bg-slate-50/50 transition-colors rounded-2xl px-4 -mx-4">
+<div class="w-12 h-12 rounded-xl bg-tertiary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-tertiary-fixed">history_edu</span>
+</div>
+<div class="flex-1">
+<h4 class="text-lg font-bold mb-2">Refine 'Summary' Tone</h4>
+<p class="text-on-surface-variant leading-relaxed">Your professional summary is a bit passive. Strengthen verbs: Replace "Assisted with" with "Spearheaded" or "Orchestrated."</p>
+</div>
+<div class="shrink-0 flex gap-2">
+<button class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-outline-variant/20 transition-all text-slate-400 hover:text-primary">
+<span class="material-symbols-outlined">refresh</span>
+</button>
+<button class="px-4 py-2 bg-surface-container-high rounded-lg text-xs font-bold hover:bg-surface-container-highest transition-all">Apply Fix</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-white mt-20 border-t border-slate-100 font-inter text-xs text-slate-500">
+<div class="flex flex-col md:flex-row justify-between items-center px-12 py-10 max-w-7xl mx-auto w-full">
+<div class="flex flex-col gap-2 mb-8 md:mb-0">
+<span class="text-lg font-bold text-slate-900">Resumify AI</span>
+<p>© 2024 Resumify AI. Intelligent Ledger Design.</p>
+</div>
+<div class="flex flex-wrap gap-8 justify-center">
+<a class="hover:text-slate-900 transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-slate-900 transition-colors" href="#">Terms of Service</a>
+<a class="hover:text-slate-900 transition-colors" href="#">Contact Us</a>
+<a class="hover:text-slate-900 transition-colors" href="#">Twitter</a>
+<a class="hover:text-slate-900 transition-colors" href="#">LinkedIn</a>
+</div>
+</div>
+</footer>
+</div>
+<!-- Floating Action Button: Contextual -->
+<button class="fixed bottom-8 right-8 bg-primary hover:bg-primary-container text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-90 z-50 group">
+<span class="material-symbols-outlined text-2xl" data-weight="fill">chat_bubble</span>
+<span class="absolute right-full mr-4 px-3 py-1 bg-on-surface text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Ask Career Coach</span>
+</button>
+</body></html>
