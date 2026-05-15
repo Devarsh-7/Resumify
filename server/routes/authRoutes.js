@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { signup, login, googleLogin, verifyEmail, resendCode, getMe, updateProfile, deleteAccount } = require('../controllers/authController');
+const { signup, login, googleLogin, verifyEmail, resendCode, getMe, updateProfile, deleteAccount, requestPasswordReset, resetPassword } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
 // ─── Rate Limiters (per-route) ───────────────────────────────
@@ -32,6 +32,8 @@ router.post('/login', authLimiter, login);
 router.post('/google', authLimiter, googleLogin);
 router.post('/verify-email', otpLimiter, verifyEmail);
 router.post('/resend-code', otpLimiter, resendCode);
+router.post('/forgot-password', authLimiter, requestPasswordReset);
+router.post('/reset-password', otpLimiter, resetPassword);
 
 // Protected routes (login required)
 router.get('/me', protect, getMe);

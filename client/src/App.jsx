@@ -8,6 +8,8 @@ import ResultsPage from './components/stitch-ui/ResultsPage';
 import ProfilePage from './components/stitch-ui/ProfilePage';
 import MyResumesPage from './components/stitch-ui/MyResumesPage';
 import VerifyEmailPage from './components/stitch-ui/VerifyEmailPage';
+import ForgotPasswordPage from './components/stitch-ui/ForgotPasswordPage';
+import ResetPasswordPage from './components/stitch-ui/ResetPasswordPage';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import NotFoundPage from './components/NotFoundPage';
@@ -28,6 +30,8 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/analysis/:id" element={<PrivateRoute><ResultsPage /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />

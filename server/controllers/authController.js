@@ -371,4 +371,83 @@ const deleteAccount = async (req, res) => {
   }
 };
 
-module.exports = { signup, login, googleLogin, verifyEmail, resendCode, getMe, updateProfile, deleteAccount };
+// @desc    Request a password reset email
+// @route   POST /api/auth/forgot-password
+const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Please provide an email' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Return 200 even if user doesn't exist to prevent email enumeration
+      return res.status(200).json({ message: 'If an account with that email exists, we sent a password reset link.' });
+    }
+
+    if (user.authProvider === 'google') {
+      return res.status(400).json({ message: 'This account uses Google Sign-In. You cannot reset its password here.' });
+    }
+
+    // Generate new OTP
+    const code = generateOTP();
+    user.resetPasswordCode = crypto.createHash('sha256').update(code).digest('hex');
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 min
+    await user.save();
+
+    const { sendPasswordResetEmail } = require('../utils/sendEmail');
+    await sendPasswordResetEmail(email, code);
+
+    res.json({ message: 'If an account with that email exists, we sent a password reset link.' });
+  } catch (error) {
+    console.error('Request password reset error:', error.message);
+    res.status(500).json({ message: 'Server error requesting password reset' });
+  }
+};
+
+// @desc    Reset password using OTP
+// @route   POST /api/auth/reset-password
+const resetPassword = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ message: 'Please provide email, verification code, and new password' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check expiry
+    if (!user.resetPasswordExpires || user.resetPasswordExpires < Date.now()) {
+      return res.status(400).json({ message: 'Password reset code has expired. Please request a new one.' });
+    }
+
+    // Compare hashed code
+    const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
+    if (hashedCode !== user.resetPasswordCode) {
+      return res.status(400).json({ message: 'Invalid verification code' });
+    }
+
+    // Set new password and clear reset fields
+    user.password = newPassword;
+    user.resetPasswordCode = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Password successfully reset. You can now log in.' });
+  } catch (error) {
+    console.error('Reset password error:', error.message);
+    res.status(500).json({ message: 'Server error resetting password' });
+  }
+};
+
+module.exports = { signup, login, googleLogin, verifyEmail, resendCode, getMe, updateProfile, deleteAccount, requestPasswordReset, resetPassword };

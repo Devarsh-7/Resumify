@@ -114,7 +114,7 @@ const AuthPage = () => {
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-on-surface-variant tracking-wide flex justify-between">
                 <span>Password</span>
-                {isLogin && <a href="#" className="text-primary hover:underline">Forgot?</a>}
+                {isLogin && <a href="/forgot-password" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="text-primary hover:underline">Forgot?</a>}
               </label>
               <input 
                 type="password" name="password" required value={formData.password} onChange={handleChange}
