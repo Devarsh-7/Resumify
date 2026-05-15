@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
@@ -44,9 +43,25 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // ─── NoSQL Injection Protection ──────────────────────────────
-// Sanitize user input: strips $ and . from req.body, req.query, req.params
+// Custom sanitizer (express-mongo-sanitize is incompatible with Express 5)
+// Strips keys starting with $ or containing . from req.body and req.params
 // Prevents attacks like { "email": { "$gt": "" } } from bypassing auth
-app.use(mongoSanitize());
+const sanitize = (obj) => {
+  if (obj && typeof obj === 'object') {
+    for (const key of Object.keys(obj)) {
+      if (key.startsWith('$') || key.includes('.')) {
+        delete obj[key];
+      } else {
+        sanitize(obj[key]);
+      }
+    }
+  }
+};
+app.use((req, res, next) => {
+  sanitize(req.body);
+  sanitize(req.params);
+  next();
+});
 
 // ─── Rate Limiting ───────────────────────────────────────────
 // Global rate limiter: 100 requests per 15 minutes per IP
