@@ -52,7 +52,9 @@ const signup = async (req, res) => {
         existingUser.verificationCodeExpires = Date.now() + 10 * 60 * 1000; // 10 min
         await existingUser.save();
 
-        await sendVerificationEmail(email, code);
+        sendVerificationEmail(email, code).catch(err => 
+          console.error('Signup resend verification email error:', err.message)
+        );
         return res.status(200).json({ 
           message: 'Verification code resent to your email', 
           email,
@@ -76,8 +78,10 @@ const signup = async (req, res) => {
       verificationCodeExpires: Date.now() + 10 * 60 * 1000, // 10 minutes
     });
 
-    // Send verification email
-    await sendVerificationEmail(email, code);
+    // Send verification email in the background
+    sendVerificationEmail(email, code).catch(err => 
+      console.error('Signup send verification email error:', err.message)
+    );
 
     // Don't send token yet — user must verify first
     res.status(201).json({
@@ -165,7 +169,9 @@ const resendCode = async (req, res) => {
     user.verificationCodeExpires = Date.now() + 10 * 60 * 1000; // 10 min
     await user.save();
 
-    await sendVerificationEmail(email, code);
+    sendVerificationEmail(email, code).catch(err => 
+      console.error('Resend verification email error:', err.message)
+    );
 
     res.json({ message: 'A new verification code has been sent to your email.' });
   } catch (error) {
@@ -213,7 +219,9 @@ const login = async (req, res) => {
       user.verificationCode = crypto.createHash('sha256').update(code).digest('hex');
       user.verificationCodeExpires = Date.now() + 10 * 60 * 1000;
       await user.save();
-      await sendVerificationEmail(email, code);
+      sendVerificationEmail(email, code).catch(err => 
+        console.error('Login auto-resend verification email error:', err.message)
+      );
 
       return res.status(403).json({ 
         message: 'Please verify your email first. A new verification code has been sent.',
@@ -398,7 +406,9 @@ const requestPasswordReset = async (req, res) => {
     await user.save();
 
     const { sendPasswordResetEmail } = require('../utils/sendEmail');
-    await sendPasswordResetEmail(email, code);
+    sendPasswordResetEmail(email, code).catch(err => 
+      console.error('Send password reset email error:', err.message)
+    );
 
     res.json({ message: 'If an account with that email exists, we sent a password reset link.' });
   } catch (error) {
