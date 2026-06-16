@@ -4,7 +4,6 @@ import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import api from '../../api/axiosConfig';
 import { AuthContext } from '../../context/AuthContext';
-import { generatePDFReport } from '../../utils/reportGenerator';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);

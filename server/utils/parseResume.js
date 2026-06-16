@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
@@ -16,7 +16,7 @@ const parseResume = async (filePath) => {
 
     if (extension === '.pdf') {
       // Read PDF file and extract text
-      const dataBuffer = fs.readFileSync(filePath);
+      const dataBuffer = await fs.readFile(filePath);
       const pdfData = await pdfParse(dataBuffer);
       text = pdfData.text;
     } else if (extension === '.docx') {
@@ -42,7 +42,7 @@ const parseResume = async (filePath) => {
   } finally {
     // Always delete the uploaded file after processing
     try {
-      fs.unlinkSync(filePath);
+      await fs.unlink(filePath);
     } catch (err) {
       console.error('Error deleting temp file:', err.message);
     }

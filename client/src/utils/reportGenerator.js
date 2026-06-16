@@ -1,4 +1,3 @@
-import { jsPDF } from 'jspdf';
 
 // ── Color palette ──────────────────────────────────────────────────────
 const COLORS = {
@@ -73,6 +72,9 @@ export const generatePDFReport = async (_elementId, metadata = {}) => {
     console.error('No analysis data provided to PDF generator.');
     return;
   }
+
+  // Dynamically import jsPDF only when this function is called
+  const { jsPDF } = await import('jspdf');
 
   const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 

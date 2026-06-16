@@ -107,7 +107,9 @@ const analyzeResume = async (req, res) => {
 // @route   GET /api/resume/vault
 const getVault = async (req, res) => {
   try {
-    const resumes = await Resume.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const resumes = await Resume.find({ user: req.user._id })
+      .select('-resumeText')
+      .sort({ createdAt: -1 });
     res.json(resumes);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch resume vault' });

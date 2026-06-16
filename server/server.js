@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 
@@ -15,6 +16,9 @@ const app = express();
 // ─── Security Middleware ─────────────────────────────────────
 // Helmet: Sets secure HTTP headers (XSS protection, clickjacking, MIME-sniffing, etc.)
 app.use(helmet());
+
+// Compression: Compresses all JSON response payloads sent to the client (Brotli/Gzip)
+app.use(compression());
 
 // ─── CORS ────────────────────────────────────────────────────
 // Enable CORS (allow frontend to talk to backend)
@@ -64,15 +68,39 @@ app.use((req, res, next) => {
 });
 
 // ─── Rate Limiting ───────────────────────────────────────────
-// Global rate limiter: 100 requests per 15 minutes per IP
+// 1. General rate limiter: 200 requests per 15 minutes per IP (for normal API queries)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests, please try again later.' },
 });
 app.use('/api', globalLimiter);
+
+// 2. Strict limiter for expensive Gemini AI resume analysis
+const aiAnalysisLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Max 10 analyses per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many analysis requests. Please try again later.' },
+});
+app.use('/api/resume/analyze', aiAnalysisLimiter);
+
+// 3. Strict limiter for email sending and verification to prevent OTP spam/brute-force
+const authLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 5, // Max 5 signup/verification/OTP resend attempts
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many verification attempts. Please try again in 10 minutes.' },
+});
+app.use('/api/auth/signup', authLimiter);
+app.use('/api/auth/verify-email', authLimiter);
+app.use('/api/auth/resend-code', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/reset-password', authLimiter);
 
 // ─── Routes ──────────────────────────────────────────────────
 app.use('/api/auth', require('./routes/authRoutes'));
