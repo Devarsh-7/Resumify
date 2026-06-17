@@ -14,6 +14,7 @@ const MyResumesPage = lazy(() => import('./components/stitch-ui/MyResumesPage'))
 const VerifyEmailPage = lazy(() => import('./components/stitch-ui/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('./components/stitch-ui/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./components/stitch-ui/ResetPasswordPage'));
+const AIHumanizerPage = lazy(() => import('./components/stitch-ui/AIHumanizerPage'));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage'));
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
               <Route path="/analysis/:id" element={<PrivateRoute><ResultsPage /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
               <Route path="/resumes" element={<PrivateRoute><MyResumesPage /></PrivateRoute>} />
+              <Route path="/humanizer" element={<PrivateRoute><AIHumanizerPage /></PrivateRoute>} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>

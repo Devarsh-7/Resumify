@@ -9,6 +9,7 @@ const {
   deleteAnalysis,
   getVault,
   deleteResume,
+  humanizeText,
 } = require('../controllers/resumeController');
 
 // All resume routes are protected (login required)
@@ -18,5 +19,6 @@ router.get('/vault', protect, getVault);
 router.get('/analysis/:id', protect, getAnalysis);
 router.delete('/analysis/:id', protect, deleteAnalysis);
 router.delete('/vault/:id', protect, deleteResume);
+router.post('/humanize', protect, humanizeText);
 
 module.exports = router;

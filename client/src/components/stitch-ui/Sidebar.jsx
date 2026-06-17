@@ -16,6 +16,7 @@ const Sidebar = ({ activeTab = 'Dashboard' }) => {
   const menuItems = [
     { label: 'Dashboard', icon: 'grid_view', path: '/dashboard' },
     { label: 'My Resumes', icon: 'description', path: '/resumes' },
+    { label: 'AI Humanizer', icon: 'auto_awesome', path: '/humanizer' },
     { label: 'Profile', icon: 'person', path: '/profile' },
   ];
 

@@ -4,6 +4,7 @@ const Analysis = require('../models/Analysis');
 const Resume = require('../models/Resume');
 const parseResume = require('../utils/parseResume');
 const analyzeWithAI = require('../utils/analyzeWithAI');
+const humanizeAI = require('../utils/humanizeAI');
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
@@ -186,4 +187,30 @@ const deleteAnalysis = async (req, res) => {
   }
 };
 
-module.exports = { upload, analyzeResume, getHistory, getAnalysis, deleteAnalysis, getVault, deleteResume };
+// @desc    Detect AI-generated content and humanize text
+// @route   POST /api/resume/humanize
+// @access  Private (login required)
+const humanizeText = async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text || text.trim().length < 20) {
+      return res.status(400).json({ message: 'Please provide text of at least 20 characters.' });
+    }
+
+    if (text.length > 5000) {
+      return res.status(400).json({ message: 'Text exceeds the 5000 character limit.' });
+    }
+
+    console.log(`🤖 Humanizing text segment (${text.length} chars) for user ${req.user._id}...`);
+    const result = await humanizeAI(text);
+    console.log('✅ Humanization analysis complete!');
+
+    res.json(result);
+  } catch (error) {
+    console.error('Humanizer controller error:', error.message);
+    res.status(500).json({ message: error.message || 'Failed to humanize text' });
+  }
+};
+
+module.exports = { upload, analyzeResume, getHistory, getAnalysis, deleteAnalysis, getVault, deleteResume, humanizeText };

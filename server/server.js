@@ -88,6 +88,16 @@ const aiAnalysisLimiter = rateLimit({
 });
 app.use('/api/resume/analyze', aiAnalysisLimiter);
 
+// Strict limiter for humanizing text
+const humanizeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Max 20 requests per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many humanizer requests. Please try again later.' },
+});
+app.use('/api/resume/humanize', humanizeLimiter);
+
 // 3. Strict limiter for email sending and verification to prevent OTP spam/brute-force
 const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes

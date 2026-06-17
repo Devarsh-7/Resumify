@@ -15,7 +15,9 @@ const generateToken = (id) => {
 
 // Helper: Generate a 6-digit OTP
 const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log(`[DEVELOPER DEV ONLY] Generated OTP: ${code}`);
+  return code;
 };
 
 // Helper: Validate email format
