@@ -12,35 +12,36 @@ const MyResumesPage = () => {
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'Vault'); // 'Vault' or 'History'
   const [vault, setVault] = useState([]);
   const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-
-  const fetchHistory = async () => {
-    try {
-      const res = await api.get('/resume/history');
-      setHistory(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchVault = async () => {
-    try {
-      const res = await api.get('/resume/vault');
-      setVault(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const [hasFetchedVault, setHasFetchedVault] = useState(false);
+  const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      await Promise.all([fetchHistory(), fetchVault()]);
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
+    if (activeTab === 'Vault') {
+      if (!hasFetchedVault) {
+        setLoading(true);
+        api.get('/resume/vault')
+          .then(res => {
+            setVault(res.data);
+            setHasFetchedVault(true);
+          })
+          .catch(err => console.error(err))
+          .finally(() => setLoading(false));
+      }
+    } else {
+      if (!hasFetchedHistory) {
+        setLoading(true);
+        api.get('/resume/history')
+          .then(res => {
+            setHistory(res.data);
+            setHasFetchedHistory(true);
+          })
+          .catch(err => console.error(err))
+          .finally(() => setLoading(false));
+      }
+    }
+  }, [activeTab, hasFetchedVault, hasFetchedHistory]);
 
   const handleDeleteAnalysis = async (id) => {
     if (!window.confirm("Are you sure you want to delete this analysis?")) return;

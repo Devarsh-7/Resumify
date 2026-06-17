@@ -23,4 +23,7 @@ const resumeSchema = new mongoose.Schema({
 // Index for fast per-user vault queries + upsert by filename
 resumeSchema.index({ user: 1, fileName: 1 }, { unique: true });
 
+// Index for fast sorted queries of the vault list
+resumeSchema.index({ user: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Resume', resumeSchema);

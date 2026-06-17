@@ -76,12 +76,14 @@ const analyzeResume = async (req, res) => {
       strengths: aiResult.strengths || [],
     });
 
-    // Step 4: Sync to Resume Vault (Save the text for re-use)
-    await Resume.findOneAndUpdate(
+    // Step 4: Sync to Resume Vault (Save the text for re-use) in the background
+    Resume.findOneAndUpdate(
       { user: req.user._id, fileName: req.file.originalname },
       { resumeText: resumeText, createdAt: Date.now() },
       { upsert: true, new: true }
-    );
+    ).catch(err => {
+      console.error('Background Resume Vault sync error:', err.message);
+    });
 
     // Step 5: Return the results
     res.status(201).json({
@@ -134,10 +136,23 @@ const deleteResume = async (req, res) => {
 // @access  Private (login required)
 const getHistory = async (req, res) => {
   try {
-    const analyses = await Analysis.find({ user: req.user._id })
+    const limit = parseInt(req.query.limit) || 0;
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+
+    const total = await Analysis.countDocuments({ user: req.user._id });
+    res.setHeader('X-Total-Count', total);
+    res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
+
+    let query = Analysis.find({ user: req.user._id })
       .sort({ analyzedAt: -1 }) // Newest first
       .select('-jobDescription'); // Don't send full JD text in list view
 
+    if (limit > 0) {
+      query = query.skip(skip).limit(limit);
+    }
+
+    const analyses = await query;
     res.json(analyses);
   } catch (error) {
     console.error('History fetch error:', error.message);

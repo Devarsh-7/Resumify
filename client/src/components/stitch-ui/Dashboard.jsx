@@ -9,6 +9,7 @@ const Dashboard = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
+  const [totalAnalyses, setTotalAnalyses] = useState(0);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
@@ -29,8 +30,14 @@ const Dashboard = () => {
 
   const fetchHistory = async () => {
     try {
-      const res = await api.get('/resume/history');
+      const res = await api.get('/resume/history?limit=5');
       setHistory(res.data);
+      const totalHeader = res.headers['x-total-count'];
+      if (totalHeader) {
+        setTotalAnalyses(parseInt(totalHeader, 10));
+      } else {
+        setTotalAnalyses(res.data.length);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -223,7 +230,7 @@ const Dashboard = () => {
               <div className="bg-blue-700 rounded-[32px] p-8 text-white shadow-xl shadow-blue-200 dark:shadow-blue-900/50 transition-shadow duration-300">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] mb-8 opacity-80">All-Time Stats</p>
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-6xl font-black">{history.length}</span>
+                  <span className="text-6xl font-black">{totalAnalyses}</span>
                 </div>
                 <p className="text-sm opacity-80 mb-4">Total Analyses</p>
                 <div className="flex items-center gap-2 text-xs opacity-70">
