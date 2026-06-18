@@ -1,6 +1,6 @@
-# 🏗️ Resumify: Single Source of Truth (SSOT) v3.0
+# 🏗️ Resumify: Single Source of Truth (SSOT) v3.1
 
-> **Last Audited**: May 2026 — Every file, route, schema, and dependency verified against the live codebase.
+> **Last Audited**: June 2026 — Every file, route, schema, and dependency verified against the live codebase.
 
 This document serves as the authoritative technical reference for the **Resumify** project. It covers the architectural philosophy, data lifecycle, backend logic, frontend structure, database schemas, and a complete directory manifest.
 
@@ -18,12 +18,14 @@ Resumify follows a **decoupled MERN (MongoDB, Express, React, Node.js) stack** a
 | **Express.js + Node.js** | Minimal overhead for I/O-bound operations (file uploads, AI API calls). The middleware pipeline cleanly separates authentication, file validation, and business logic. |
 | **React 19 + Vite** | Component-based architecture for complex, stateful UIs (score animations, drag-and-drop). Vite provides sub-second HMR for rapid iteration. |
 | **Tailwind CSS v3** | Utility-first styling enabling a consistent glassmorphic dark/light theme without custom CSS bloat. |
-| **Google Gemini 2.5 Flash** | Structured JSON output via `responseSchema` ensures AI feedback maps directly to frontend components without post-processing. Deterministic via `temperature: 0`. |
+| **Google Gemini 3.1 Flash Lite** | Fast, cost-effective model configured with structured JSON output via `responseSchema`. Lower latency and higher rate limits resolve quota restrictions for resume analysis and text humanization. |
 | **Google Cloud Platform** | OAuth 2.0 integration for frictionless, trusted user onboarding. |
-| **Nodemailer (Gmail SMTP)** | Zero-cost transactional email for OTP verification without third-party email services. |
+| **Nodemailer (Gmail SMTP)** | Zero-cost transactional email for OTP verification and password reset without third-party email service lock-in. |
+| **Compression (Gzip/Brotli)** | Middleware applied to compress response payloads, accelerating client load times and saving bandwidth. |
+| **Custom Sanitizer** | Replaces deprecated dependencies with Express 5-compatible parameter sanitization to block NoSQL injection vectors. |
 
 ### Core Problem Statement
-The system bridges the **"Insight Gap"** in modern hiring. Most job seekers have no visibility into why their resume fails automated ATS filters. Resumify provides a transparent, AI-driven feedback loop with a **stateful career vault**, identity verification (Email OTP + Google OAuth), and professional PDF report generation to track improvement over time.
+The system bridges the **"Insight Gap"** in modern hiring. Most job seekers have no visibility into why their resume fails automated ATS filters. Resumify provides a transparent, AI-driven feedback loop with a **stateful career vault**, identity verification (Email OTP + Google OAuth), an **AI Humanizer** to rewrite machine-like patterns, and professional PDF report generation to track improvement over time.
 
 ---
 
@@ -45,7 +47,7 @@ sequenceDiagram
         FE->>BE: POST /api/auth/signup
         BE->>BE: Hash OTP with SHA-256
         BE->>DB: Create User (isVerified: false)
-        BE->>GM: Send 6-digit OTP email
+        BE->>GM: Send 6-digit OTP email (Background)
         BE-->>FE: { needsVerification: true, email }
         FE->>U: Redirect to /verify-email
         U->>FE: Enter OTP
@@ -66,11 +68,45 @@ sequenceDiagram
 ```
 
 **Key Details:**
-1. **Signup** creates an unverified user and dispatches a hashed 6-digit OTP (10-minute expiry) via Gmail SMTP.
+1. **Signup** creates an unverified user and dispatches a hashed 6-digit OTP (10-minute expiry) via Gmail SMTP in a non-blocking background task.
 2. **Login** blocks unverified local accounts and auto-resends a new OTP. Google-only accounts are rejected from password login.
 3. **Legacy Migration**: On server boot, `server.js` runs a one-time migration to mark all pre-verification-era users as `isVerified: true` to prevent lockouts.
 
-### B. The "Life of an Analysis" (Targeted vs. General)
+---
+
+### B. Forgot Password Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend
+    participant BE as Backend
+    participant DB as MongoDB
+    participant GM as Gmail SMTP
+
+    U->>FE: Click "Forgot?" on AuthPage
+    FE->>U: Redirect to /forgot-password
+    U->>FE: Input email address
+    FE->>BE: POST /api/auth/forgot-password
+    BE->>DB: Find user, generate OTP
+    BE->>DB: Save hashed OTP & 10m expiry to User
+    BE->>GM: Send Reset OTP email (Background)
+    BE-->>FE: 200 OK (Generic message to prevent email enumeration)
+    FE->>U: Redirect to /reset-password (state: email)
+    U->>FE: Input 6-digit OTP & new password
+    FE->>BE: POST /api/auth/reset-password
+    BE->>DB: Validate OTP, check expiry, hash new password
+    BE-->>FE: 200 OK (Success)
+    FE->>U: Redirect to /auth (Login)
+```
+
+**Key Details:**
+1. **Email Enumeration Mitigation**: The forgot-password endpoint returns a successful 200 response with a generic message even if the email does not exist in the database.
+2. **Google OAuth Safety**: Accounts registered via Google OAuth are blocked from requesting password resets, returning a warning that Google Sign-in must be used.
+
+---
+
+### C. The "Life of an Analysis" (Targeted vs. General)
 
 ```
 ┌──────────────┐    multipart/form-data    ┌────────────────┐
@@ -84,11 +120,11 @@ sequenceDiagram
                                            │ (pdf-parse /   │
                                            │  mammoth)      │
                                            └───────┬────────┘
-                                                   │ raw text
+                                                   │ raw text (Async I/O)
                                                    ▼
                                            ┌────────────────┐
                                            │ analyzeWithAI  │
-                                           │ (Gemini API)   │
+                                           │ (Gemini 3.1)   │
                                            │ Schema:        │
                                            │ targeted or    │
                                            │ general        │
@@ -112,11 +148,39 @@ sequenceDiagram
 **Step-by-step:**
 1. **Ingestion**: `Dashboard.jsx` captures a file (drag-and-drop or browse) and an optional Job Description textarea.
 2. **Multer Validation**: MIME type check (`application/pdf`, DOCX) and 5MB size limit. File stored temporarily in `uploads/`.
-3. **Text Extraction**: `parseResume.js` dispatches to `pdf-parse` (PDF) or `mammoth` (DOCX). Text is normalized (whitespace collapsed, line endings standardized). A minimum 50-character threshold rejects image-based or empty PDFs.
-4. **AI Analysis**: `analyzeWithAI.js` selects the appropriate JSON schema (`targetedSchema` with JD, or `generalSchema` without). Sends a weighted scoring prompt to Gemini. Score is clamped to `[0, 100]`.
-5. **Persistence**: The `Analysis` record stores the scored result. The `Resume` Vault stores the raw extracted text (not the binary file) for future re-analysis without re-uploading.
-6. **Cleanup**: The temporary file is immediately `unlink`'d from `uploads/` regardless of success or failure (via `finally` block).
-7. **Reporting**: On `ResultsPage.jsx`, users can export a professional PDF via `reportGenerator.js` (DOM capture → paginated A4 PDF).
+3. **Asynchronous Extraction**: `parseResume.js` extracts text using `pdf-parse` (PDF) or `mammoth` (DOCX) via asynchronous `fs.promises` to avoid event-loop blocking. A minimum 50-character threshold rejects image-based or empty PDFs.
+4. **AI Analysis**: `analyzeWithAI.js` configures Gemini 3.1 Flash Lite with the appropriate JSON schema (`targetedSchema` with JD, or `generalSchema` without). Sends a weighted scoring prompt to Gemini. Score is clamped to `[0, 100]`.
+5. **Persistence**: The `Analysis` record stores the scored result. The `Resume` Vault stores the raw extracted text (not the binary file) for future re-analysis without re-uploading. Vault updates run in the background to speed up response latency.
+6. **Cleanup**: The temporary file is immediately deleted using asynchronous `fs.promises.unlink` in a `finally` block.
+7. **Reporting**: On `ResultsPage.jsx`, users can export a professional PDF via `reportGenerator.js` which dynamically imports `jspdf` on-demand to optimize page load sizes.
+
+---
+
+### D. AI Humanizer Flow
+
+```
+┌─────────────────┐  import: paste,   ┌────────────────┐  POST /api/resume/humanize  ┌───────────────────┐
+│ AIHumanizerPage │  upload, or vault  │ Parse / Select │ ──────────────────────────>│ humanizeAI.js     │
+│ (React Workspace)│ ────────────────>│ Resume Text    │  Rate limit: 20 req / 15m  │ (Gemini 3.1 Lite) │
+└─────────────────┘                    └────────────────┘                            └─────────┬─────────┘
+        ▲                                                                                      │
+        │                                                                                      │ Structured JSON
+        │                                                                                      ▼
+        │                              Comparative Document Review                    ┌───────────────────┐
+        └─────────────────────────────────────────────────────────────────────────────│ Synchronized      │
+                                       - Side-by-side scrolls (Feedback-free)         │ scroll view       │
+                                       - Robotic patterns highlighted in Red          │ and Tabs          │
+                                       - Humanized tone highlighted in Green          └───────────────────┘
+```
+
+**Step-by-step:**
+1. **Input Stage**: The user enters text by pasting directly, uploading a file (processed by `/api/resume/parse` using async extraction and saved in vault), or pulling an existing document from the Vault.
+2. **Optimization Pathway Selection**: 
+   - **Specific Section** (e.g., job bullet, summary): Character limit 5,000.
+   - **Overall Resume** (entire document structure): Character limit 15,000.
+3. **Linguistic Optimization**: The backend processes the text via the `humanizeLimiter` and forwards it to Gemini 3.1 Flash Lite. The model evaluates the content for sentence length uniformity (burstiness), predictability (perplexity), and repetitive structures.
+4. **Structured Rewrite**: Gemini returns a JSON payload matching `humanizeSchema` containing the restructured text, a list of tone/syntax/vocabulary recommendations, and an array of exact before-and-after replacements (`explanations`).
+5. **Visualization**: The client renders the comparison side-by-side. Customized hook logic locks scrolling positions together synchronously, avoiding scroll feedback loops. Highlighting matches list indentation and flags robotic sections in red and humanized rewrites in green.
 
 ---
 
@@ -125,11 +189,13 @@ sequenceDiagram
 ### 3.1 Security Implementations
 | Mechanism | Implementation | Detail |
 |-----------|---------------|--------|
-| **OTP Hashing** | `crypto.createHash('sha256')` | Codes are never stored in plaintext. Compared via hash match. |
+| **OTP Hashing** | `crypto.createHash('sha256')` | Verification codes and password reset codes are never stored in plaintext. Compared via hash match. |
 | **Password Hashing** | `bcryptjs` (10 salt rounds) | Pre-save hook on the `User` model. Only runs when `password` is modified. |
 | **JWT Protection** | `middleware/auth.js` | Extracts `Bearer` token, verifies with `JWT_SECRET`, attaches `req.user` for downstream handlers. |
 | **Google Token Verification** | `google-auth-library` | Server-side `verifyIdToken()` prevents credential spoofing from the frontend. |
+| **Sanitization** | Custom request sanitizer | Intercepts Express 5 payloads and strips potential NoSQL injection injection operators (e.g., `$`, `.`). |
 | **Cascade Deletion** | `authController.deleteAccount` | Deletes all `Analysis` records for the user before deleting the `User` document, preventing orphaned data. |
+| **Non-blocking Operations** | Unawaited Promise Chains | Email dispatches and vault write-backs are done as background promises (`.catch()`) so controller responses resolve immediately. |
 
 ### 3.2 API Structure
 
@@ -141,7 +207,9 @@ sequenceDiagram
 | POST | `/resend-code` | `resendCode` | ❌ | Generate and send a fresh OTP |
 | POST | `/login` | `login` | ❌ | Authenticate with email/password |
 | POST | `/google` | `googleLogin` | ❌ | OAuth login/signup via Google |
-| GET | `/me` | `getMe` | ✅ | Fetch authenticated user profile |
+| POST | `/forgot-password` | `requestPasswordReset` | ❌ | Generate password reset OTP, send email |
+| POST | `/reset-password` | `resetPassword` | ❌ | Validate OTP and set new password |
+| GET | `/me` | `getMe` | ✅ | Fetch authenticated user profile (uses in-memory `req.user`) |
 | PUT | `/profile` | `updateProfile` | ✅ | Update name, email, password, career defaults |
 | DELETE | `/account` | `deleteAccount` | ✅ | Permanently delete account + all data |
 
@@ -149,11 +217,14 @@ sequenceDiagram
 | Method | Endpoint | Handler | Auth | Description |
 |--------|----------|---------|------|-------------|
 | POST | `/analyze` | `analyzeResume` | ✅ | Upload file + JD → AI analysis |
-| GET | `/history` | `getHistory` | ✅ | List all analyses (newest first, no JD text) |
-| GET | `/vault` | `getVault` | ✅ | List all stored resume texts |
+| POST | `/parse` | `parseResumeFile` | ✅ | Upload file (PDF/DOCX) → raw text, sync to vault |
+| GET | `/history` | `getHistory` | ✅ | List all analyses (paginated, sorted newest first, excludes JD) |
+| GET | `/vault` | `getVault` | ✅ | List vault items (excludes heavy `resumeText` body) |
+| GET | `/vault/:id` | `getResumeById` | ✅ | Fetch single vault item details (includes full text) |
 | GET | `/analysis/:id` | `getAnalysis` | ✅ | Fetch single analysis with full detail |
 | DELETE | `/analysis/:id` | `deleteAnalysis` | ✅ | Remove a specific analysis |
 | DELETE | `/vault/:id` | `deleteResume` | ✅ | Remove a resume from the vault |
+| POST | `/humanize` | `humanizeText` | ✅ | Detect AI probability and rewrite text |
 
 #### System Endpoint
 | Method | Endpoint | Description |
@@ -163,16 +234,25 @@ sequenceDiagram
 ### 3.3 Backend Utilities
 | Utility | Purpose |
 |---------|---------|
-| `utils/parseResume.js` | Format-specific text extraction. PDF via `pdf-parse`, DOCX via `mammoth.extractRawText()`. Auto-deletes temp files in `finally`. |
-| `utils/analyzeWithAI.js` | Prompt-engineered Gemini interface. Uses two distinct JSON schemas (`targetedSchema` / `generalSchema`) with `responseMimeType: 'application/json'` for type-safe output. |
-| `utils/sendEmail.js` | Nodemailer transport (Gmail SMTP). Sends branded HTML emails with the 6-digit OTP and a 10-minute expiry notice. |
+| `utils/parseResume.js` | Format-specific text extraction. PDF via `pdf-parse`, DOCX via `mammoth.extractRawText()`. Fully async via `fs.promises` to prevent event-loop delays. Auto-deletes temp files in `finally`. |
+| `utils/analyzeWithAI.js` | Prompt-engineered Gemini 3.1 Flash Lite interface. Uses targeted/general JSON schemas with `responseMimeType: 'application/json'` for type-safe outputs. Handles date checking context. |
+| `utils/humanizeAI.js` | Gemini 3.1 Flash Lite client configured with `humanizeSchema` for AI probability detection, linguistic analysis, and side-by-side translation arrays. |
+| `utils/sendEmail.js` | Nodemailer transport (Gmail SMTP). Sends branded HTML emails for OTP verification (`sendVerificationEmail`) and password recovery (`sendPasswordResetEmail`). |
 
 ### 3.4 Middleware
 | Middleware | File | Purpose |
 |------------|------|---------|
 | `protect` | `middleware/auth.js` | JWT verification gate. Populates `req.user` or returns 401. |
 | `upload` (Multer) | Configured in `resumeController.js` | Disk storage to `uploads/`, MIME type filtering, 5MB limit. |
-| Global Error Handler | `server.js` | Catches Multer-specific errors (`LIMIT_FILE_SIZE`, invalid type) and generic server errors. |
+| `compression` | Imported in `server.js` | Compresses response payloads (Gzip/Brotli) to speed up server delivery. |
+| Global Error Handler | `server.js` | Catches Multer errors (`LIMIT_FILE_SIZE`, invalid type) and generic server exceptions. |
+
+#### Specialized Rate Limiters (`server.js`)
+*   **Global Limiter**: `max: 200` requests per 15 minutes per IP.
+*   **AI Analysis Limiter**: `/api/resume/analyze` restricted to `max: 10` requests per 15 minutes.
+*   **Humanizer Limiter**: `/api/resume/humanize` restricted to `max: 20` requests per 15 minutes.
+*   **Document Parse Limiter**: `/api/resume/parse` restricted to `max: 15` requests per 15 minutes.
+*   **Auth Operations Limiter**: `/api/auth/signup`, `/verify-email`, `/resend-code`, `/forgot-password`, `/reset-password` restricted to `max: 5` requests per 10 minutes.
 
 ---
 
@@ -180,61 +260,65 @@ sequenceDiagram
 
 ### 4.1 Application Shell & Routing
 
-The app is wrapped in two providers:
+To optimize the application's initial load size, all route pages are split and **lazy-loaded** using React's `lazy` and `Suspense` mechanism.
+
 ```
-<GoogleOAuthProvider>     ← @react-oauth/google (Client ID)
-  <AuthProvider>          ← React Context (user state, auth methods)
-    <BrowserRouter>       ← react-router-dom v7
+<AuthProvider>             ← React Context (user state, auth methods)
+  <BrowserRouter>          ← react-router-dom v7
+    <Suspense fallback={Spinner}>
       <Routes />
-    </BrowserRouter>
-  </AuthProvider>
-</GoogleOAuthProvider>
+    </Suspense>
+  </BrowserRouter>
+</AuthProvider>
 ```
 
 **Route Map:**
 | Path | Component | Protected | Description |
 |------|-----------|-----------|-------------|
 | `/` | `LandingPage` | ❌ | Public marketing page with feature highlights |
-| `/auth` | `AuthPage` | ❌ | Multi-mode Login/Signup form with Google OAuth |
+| `/auth` | `AuthPage` | ❌ | Login/Signup with scoped Google OAuth Provider |
 | `/verify-email` | `VerifyEmailPage` | ❌ | OTP input with resend and countdown logic |
-| `/dashboard` | `Dashboard` | ✅ | File upload hub + recent analysis history |
+| `/forgot-password` | `ForgotPasswordPage` | ❌ | Password reset request form |
+| `/reset-password` | `ResetPasswordPage` | ❌ | Input recovery code and input new password |
+| `/dashboard` | `Dashboard` | ✅ | File upload hub + recent analyses (limit 5) |
 | `/analysis/:id` | `ResultsPage` | ✅ | Full analysis visualization + PDF export |
 | `/profile` | `ProfilePage` | ✅ | Career defaults, account settings, delete account |
-| `/resumes` | `MyResumesPage` | ✅ | Resume vault + analysis history tabs |
+| `/resumes` | `MyResumesPage` | ✅ | Vault & History tabs with lazy-loaded cache |
+| `/humanizer` | `AIHumanizerPage` | ✅ | Synchronized side-by-side comparative editor |
 
 ### 4.2 State Management
 
 **`AuthContext.jsx`** — Provides the following globally:
-| Method | Behavior |
-|--------|----------|
-| `login(email, password)` | POST `/auth/login` → stores token + sets user |
-| `signup(name, email, password)` | POST `/auth/signup` → returns response (no token yet) |
-| `verifyEmail(email, code)` | POST `/auth/verify-email` → stores token + sets user |
-| `googleLogin(credential)` | POST `/auth/google` → stores token + sets user |
-| `logout()` | Clears `localStorage` token and nullifies user state |
-| `updateUser(data)` | In-memory user state update (after profile edits) |
+*   `login(email, password)`: POST `/auth/login` → stores token + sets user
+*   `signup(name, email, password)`: POST `/auth/signup` → returns verification trigger
+*   `verifyEmail(email, code)`: POST `/auth/verify-email` → stores token + sets user
+*   `googleLogin(credential)`: POST `/auth/google` → stores token + sets user
+*   `requestPasswordReset(email)`: POST `/auth/forgot-password` → sends code
+*   `resetPassword(email, code, newPassword)`: POST `/auth/reset-password` → updates credential
+*   `logout()`: Clears `localStorage` and nullifies user state
+*   `updateUser(data)`: In-memory profile updater
 
-**`PrivateRoute.jsx`** — Wraps protected routes. Shows a loading spinner while `AuthContext` validates the stored JWT on mount, then either renders children or redirects to `/auth`.
+**`PrivateRoute.jsx`** — Route protection gate. Checks authentication token status before rendering child components.
+
+**Google OAuth Optimization**: `<GoogleOAuthProvider>` was removed from the global app shell and placed specifically in `AuthPage.jsx` surrounding the button. This prevents importing Google auth bundle code until the user visits the login screen.
 
 ### 4.3 Page Components (stitch-ui/)
-| Component | Lines | Responsibility |
-|-----------|-------|----------------|
-| **`LandingPage.jsx`** | ~150 | Public hero section with feature cards, testimonials, and CTA buttons to `/auth`. |
-| **`AuthPage.jsx`** | ~200 | Dual-mode form (Login/Signup) with field validation. Integrates Google OAuth button. Redirects to `/verify-email` on signup. |
-| **`VerifyEmailPage.jsx`** | ~250 | 6-digit OTP input grid with auto-focus advance. Resend code button with cooldown timer. Handles expired/invalid code errors. |
-| **`Dashboard.jsx`** | ~260 | Drag-and-drop file upload zone, optional JD textarea, recent analysis cards with quick-view/download/delete actions. Account usage stats sidebar. |
-| **`ResultsPage.jsx`** | ~300 | ATS score gauge, matched/missing skill tags, strength highlights, suggestion list, and PDF report download button. |
-| **`ProfilePage.jsx`** | ~400 | Three-section layout: Personal Info editing, Career Defaults (target role, industry, experience level), and Danger Zone (password change, account deletion with confirmation). |
-| **`MyResumesPage.jsx`** | ~280 | Tabbed interface: "History" tab lists past analyses, "Vault" tab manages stored resume texts. Both support delete actions. |
-| **`Navbar.jsx`** | ~170 | Top navigation bar with logo, theme toggle (dark/light), and user avatar dropdown (Profile, My Resumes, Logout). Responsive. |
-| **`Sidebar.jsx`** | ~70 | Left sidebar with icon-based navigation links (Dashboard, My Resumes, Help). Active tab highlighting. |
-| **`HelpModal.jsx`** | ~140 | Overlay modal triggered from Sidebar. FAQ-style accordion explaining how to use the platform, file requirements, and scoring methodology. |
+*   **`LandingPage.jsx`**: Public showcase page detailing ATS checking and humanizing tools.
+*   **`AuthPage.jsx`**: Handles authentication forms and Google Sign-In button.
+*   **`VerifyEmailPage.jsx`**: 6-digit OTP entry form for account verification.
+*   **`ForgotPasswordPage.jsx`** [NEW]: UI for requesting a password reset email.
+*   **`ResetPasswordPage.jsx`** [NEW]: Multi-field OTP entry screen for entering the recovery code and specifying a new secure password.
+*   **`AIHumanizerPage.jsx`** [NEW]: Side-by-side comparison workspace. Offers fuzzy highlight matching (retaining list indentation, marking robotic texts in red and corrected texts in green), scroll synchronization, tone/syntax/vocabulary suggestions tabs, and file/vault imports.
+*   **`Dashboard.jsx`**: File drag-drop panel, optional JD inputs, and quick metrics. Queries history with `?limit=5` and reads the custom `X-Total-Count` header to display total stats.
+*   **`MyResumesPage.jsx`**: Tabbed interface splits history lists and Vault files. Uses tab-level lazy fetching and client caching (`hasFetchedVault` / `hasFetchedHistory`) to avoid duplicate API requests.
+*   **`Navbar.jsx`**: Navigation bar featuring theme toggler (light/dark mode) and user menu dropdowns.
+*   **`Sidebar.jsx`**: Icon-based navigation sidebar; now includes the **AI Humanizer** workspace.
+*   **`HelpModal.jsx`**: Help overlay detail window explaining ATS scoring weights.
 
 ### 4.4 Frontend Utilities
-| Utility | Purpose |
-|---------|---------|
-| **`api/axiosConfig.js`** | Centralized Axios instance with `baseURL: '/api'`. Request interceptor auto-attaches `Bearer` token from `localStorage` to every outgoing request. |
-| **`utils/reportGenerator.js`** | DOM-to-PDF export engine. Uses `html2canvas` (scale: 2, locked width: 1200px) for high-fidelity capture. `jsPDF` handles A4 pagination with 15mm margins. Dynamically adapts background color to the user's current dark/light theme. Hides `.no-print` elements and reveals `[data-pdf-only]` elements during capture. |
+*   **`api/axiosConfig.js`**: Axios config intercepting client calls and auto-appending Bearer tokens.
+*   **`utils/reportGenerator.js`**: High-fidelity PDF compiler using `html2canvas`. Optimized with dynamic import (`await import('jspdf')`) to keep the primary JS bundle size lean.
+*   **`client/vercel.json`** [NEW]: Configures Vercel edge deployment routes for single-page routing (SPA fallback) and serves static `/assets/` files with immutable long-term cache headers.
 
 ---
 
@@ -257,11 +341,14 @@ The app is wrapped in two providers:
   isVerified:                Boolean,       // default: false
   verificationCode:          String,        // SHA-256 hashed OTP (cleared after verification)
   verificationCodeExpires:   Date,          // 10 minutes from generation
+  resetPasswordCode:         String,        // SHA-256 hashed password reset OTP
+  resetPasswordExpires:      Date,          // 10 minutes from generation
   createdAt:                 Date,          // default: Date.now
 }
 ```
 **Hooks:** `pre('save')` — hashes password via `bcryptjs` (10 rounds) only when modified.
-**Methods:** `matchPassword(entered)` — compares plaintext against stored hash. Returns `false` for Google-only users.
+
+---
 
 ### 5.2 Analysis Entity
 ```javascript
@@ -279,6 +366,8 @@ The app is wrapped in two providers:
 }
 ```
 
+---
+
 ### 5.3 Resume Entity (Vault)
 ```javascript
 {
@@ -288,131 +377,92 @@ The app is wrapped in two providers:
   createdAt:   Date,        // default: Date.now
 }
 ```
-**Design Decision:** Storing extracted text instead of binary files reduces database storage by ~90% and enables instant re-analysis with a new JD without re-uploading.
-
-### 5.4 Entity Relationships
-```
-User (1) ──────< Analysis (many)     via Analysis.user → User._id
-User (1) ──────< Resume (many)       via Resume.user → User._id
-```
-**Data Isolation:** All queries in controllers filter by `req.user._id`, ensuring users can never access another user's data.
-**Cascade Deletion:** `deleteAccount` in `authController.js` explicitly deletes all `Analysis` records before removing the `User`.
+**Indexes:**
+*   `resumeSchema.index({ user: 1, fileName: 1 }, { unique: true })`: Prevents duplicate records per user resume file.
+*   `resumeSchema.index({ user: 1, createdAt: -1 })`: Speeds up sorted Vault queries.
 
 ---
 
-## 6. File-by-File Directory Manifest (v3.0)
+## 6. File-by-File Directory Manifest (v3.1)
 
 ### 📁 Root (`/`)
-| File | Description |
-|------|-------------|
-| `PROJECT_ARCHITECTURE.md` | This file — the v3.0 Single Source of Truth. |
-| `README.md` | Public-facing project overview, setup guide, and API reference. |
-| `.gitignore` | Excludes `node_modules/`, `.env`, and `uploads/` from version control. |
-| `Claude.md` | AI assistant context/instructions file. |
-| `AuthPage.html` | Legacy static HTML mockup of the auth page (reference only). |
-| `Dashboard.html` | Legacy static HTML mockup of the dashboard (reference only). |
-| `LandingPage.html` | Legacy static HTML mockup of the landing page (reference only). |
-| `ResultsPage.html` | Legacy static HTML mockup of the results page (reference only). |
-| `ReactCode.txt` | Reference code snippets used during initial React migration. |
-| `package.json` | Root-level workspace config (minimal). |
-
----
+*   `PROJECT_ARCHITECTURE.md`: This file — the v3.1 Single Source of Truth.
+*   `README.md`: Setup manual and overview.
+*   `.gitignore`: Excludes dependency folders, environment files, local logs, and `[Cc]laude.md`.
+*   `package.json`: Workspace descriptor.
 
 ### 📁 Server (`server/`)
-| File | Description |
-|------|-------------|
-| `server.js` | Express entry point. Initializes middleware (CORS, JSON parsing), mounts route modules, defines global error handler, and runs the legacy user migration on boot. |
-| `config/db.js` | MongoDB connection via Mongoose. Connects using `MONGO_URI` env var. Exits process on failure. |
-| `middleware/auth.js` | JWT verification middleware (`protect`). Extracts Bearer token, decodes with `JWT_SECRET`, attaches `req.user`. |
-| `controllers/authController.js` | All authentication logic: `signup`, `login`, `googleLogin`, `verifyEmail`, `resendCode`, `getMe`, `updateProfile`, `deleteAccount`. |
-| `controllers/resumeController.js` | Resume processing logic: Multer config, `analyzeResume`, `getHistory`, `getAnalysis`, `deleteAnalysis`, `getVault`, `deleteResume`. |
-| `routes/authRoutes.js` | Maps HTTP methods to auth controller functions. 6 public + 3 protected endpoints. |
-| `routes/resumeRoutes.js` | Maps HTTP methods to resume controller functions. All 6 endpoints are protected. |
-| `models/User.js` | Mongoose schema for user identity, credentials, OAuth, career defaults, and email verification. |
-| `models/Analysis.js` | Mongoose schema for AI analysis results (scores, skills, suggestions). |
-| `models/Resume.js` | Mongoose schema for the Resume Vault (extracted text storage). |
-| `utils/parseResume.js` | Text extraction engine. Dispatches to `pdf-parse` or `mammoth` based on file extension. Auto-cleans temp files. |
-| `utils/analyzeWithAI.js` | Gemini AI interface. Constructs weighted scoring prompts and enforces structured JSON schemas. |
-| `utils/sendEmail.js` | Nodemailer transport. Sends branded HTML verification emails via Gmail SMTP. |
-| `uploads/` | Temporary storage for uploaded files. Auto-cleaned after processing. Excluded from git. |
-| `.env` | Environment secrets (not committed). |
-| `.env.example` | Template showing required environment variables. |
-
----
+*   `server.js`: Express entry point configuring secure headers, rate limits, payload compression, routes, error handling, and pre-verification migration.
+*   `config/db.js`: Mongoose connector.
+*   `middleware/auth.js`: Protected JWT verification layer.
+*   `controllers/authController.js`: Account handlers: signup, verification, login, OAuth, profile updates, and password reset flows.
+*   `controllers/resumeController.js`: Document handlers: upload parsed assets, history limits/headers, vault queries, and AI Humanizer routing.
+*   `routes/authRoutes.js`: Maps auth request endpoints.
+*   `routes/resumeRoutes.js`: Maps resume evaluation and humanization endpoints.
+*   `models/User.js`: Identity and recovery credentials model.
+*   `models/Analysis.js`: Scored analysis results schema.
+*   `models/Resume.js`: Text vault store schema with query indexes.
+*   `utils/parseResume.js`: Async file extractor supporting PDF and DOCX.
+*   `utils/analyzeWithAI.js`: ATS evaluator using Gemini 3.1 Flash Lite.
+*   `utils/humanizeAI.js` [NEW]: Gemini 3.1 Flash Lite text optimizer and AI detector.
+*   `utils/sendEmail.js`: Email dispatch routines for verification and reset OTPs.
 
 ### 📁 Client (`client/`)
-| File | Description |
-|------|-------------|
-| `src/main.jsx` | React DOM entry point. Renders `<App />` into the root element. |
-| `src/App.jsx` | Application shell. Wraps providers (`GoogleOAuthProvider` → `AuthProvider` → `BrowserRouter`). Defines all 7 routes. Initializes dark mode from localStorage. |
-| `src/App.css` | Component-level styles and animations. |
-| `src/index.css` | Global styles and Tailwind CSS directives. |
-| `src/context/AuthContext.jsx` | React Context provider. Manages `user` state, JWT persistence, and exposes `login`, `signup`, `verifyEmail`, `googleLogin`, `logout`, `updateUser` methods. |
-| `src/api/axiosConfig.js` | Centralized Axios instance (`baseURL: '/api'`). Request interceptor auto-attaches Bearer token from localStorage. |
-| `src/components/PrivateRoute.jsx` | Route guard. Shows loading spinner during auth check, renders children if authenticated, redirects to `/auth` otherwise. |
-| `src/utils/reportGenerator.js` | PDF report generation. `html2canvas` (scale: 2) → `jsPDF` (A4, 15mm margins). Theme-aware backgrounds. Multi-page pagination. |
+*   `vercel.json` [NEW]: SPA fallback routing rules and static file cache directives.
+*   `src/main.jsx`: React compiler mount element.
+*   `src/App.jsx`: Router mapping containing lazy-loaded layout pathways and Suspense loading spinner.
+*   `src/context/AuthContext.jsx`: global user session variables.
+*   `src/api/axiosConfig.js`: Client HTTP interceptor appending authorization tokens.
+*   `src/components/PrivateRoute.jsx`: Route guard.
+*   `src/utils/reportGenerator.js`: PDF export compiler optimized with dynamic `jspdf` importing.
 
 #### UI Components (`src/components/stitch-ui/`)
-| Component | Description |
-|-----------|-------------|
-| `LandingPage.jsx` | Public marketing page with hero section, feature cards, and CTA buttons. |
-| `AuthPage.jsx` | Dual-mode Login/Signup form with validation and Google OAuth button integration. |
-| `VerifyEmailPage.jsx` | 6-digit OTP input grid with auto-focus, countdown timer, and resend logic. |
-| `Dashboard.jsx` | Primary interaction hub: drag-and-drop upload, JD textarea, recent analyses list with view/download/delete, and usage stats sidebar. |
-| `ResultsPage.jsx` | Full analysis visualization: ATS score gauge, skill tags (matched/missing), strengths, suggestions, and PDF export trigger. |
-| `ProfilePage.jsx` | Three-zone settings page: Personal Info, Career Defaults (role/industry/level), and Danger Zone (password change, account deletion). |
-| `MyResumesPage.jsx` | Tabbed interface with "History" (past analyses) and "Vault" (stored resume texts) tabs. Supports bulk management. |
-| `Navbar.jsx` | Top bar with logo, dark/light theme toggle, and user avatar dropdown menu (Profile, My Resumes, Logout). |
-| `Sidebar.jsx` | Fixed left sidebar with icon navigation (Dashboard, My Resumes, Help). Active state highlighting. |
-| `HelpModal.jsx` | FAQ overlay modal explaining platform usage, file requirements, and ATS scoring methodology. |
+*   `LandingPage.jsx`: Public presentation homepage.
+*   `AuthPage.jsx`: Sign-in forms with scoped Google OAuth wrapper.
+*   `VerifyEmailPage.jsx`: Verification PIN keypad.
+*   `ForgotPasswordPage.jsx` [NEW]: Recovery request form.
+*   `ResetPasswordPage.jsx` [NEW]: Verification PIN and new password credential submission.
+*   `AIHumanizerPage.jsx` [NEW]: Side-by-side workspace comparison.
+*   `Dashboard.jsx`: Upload portal fetching history with `limit=5` and header statistics.
+*   `MyResumesPage.jsx`: Vault and History management tabs with tab-lazy fetch and client caching.
+*   `Navbar.jsx`: Theme controls and profile settings header.
+*   `Sidebar.jsx`: Main menu navigation.
+*   `HelpModal.jsx`: ATS guidelines help modal.
 
 ---
 
 ## 7. Dependencies & Environment
 
 ### 7.1 Backend Dependencies (`server/package.json`)
-| Package | Version | Role |
-|---------|---------|------|
-| `express` | ^5.2.1 | HTTP server and routing framework |
-| `mongoose` | ^9.3.3 | MongoDB ODM for schema definition and queries |
-| `@google/generative-ai` | ^0.24.1 | Gemini AI SDK for structured resume analysis |
-| `google-auth-library` | ^10.6.2 | Server-side Google OAuth token verification |
-| `nodemailer` | ^8.0.5 | SMTP email transport for OTP verification |
-| `jsonwebtoken` | ^9.0.3 | JWT generation and verification (30-day tokens) |
-| `bcryptjs` | ^3.0.3 | Password hashing (10 salt rounds) |
-| `multer` | ^2.1.1 | Multipart/form-data file upload handling |
-| `pdf-parse` | ^1.1.1 | PDF text extraction |
-| `mammoth` | ^1.12.0 | DOCX text extraction |
-| `cors` | ^2.8.6 | Cross-origin resource sharing middleware |
-| `dotenv` | ^17.4.0 | Environment variable loading |
-| `mongodb` | ^7.1.1 | Native MongoDB driver (Mongoose peer dependency) |
-| `nodemon` | ^3.1.14 | Dev-only: auto-restart on file changes |
+*   `express` (`^5.2.1`): Next-gen Express routing.
+*   `mongoose` (`^9.3.3`): MongoDB ODM.
+*   `compression` (`^1.8.0`) [NEW]: Response compression middleware.
+*   `@google/generative-ai` (`^0.24.1`): Gemini AI SDK.
+*   `google-auth-library` (`^10.6.2`): Google ID token helper.
+*   `nodemailer` (`^8.0.5`): SMTP email library.
+*   `jsonwebtoken` (`^9.0.3`): JWT signature engine.
+*   `bcryptjs` (`^3.0.3`): Password encryption.
+*   `multer` (`^2.1.1`): Multipart upload library.
+*   `pdf-parse` (`^1.1.1`): PDF extraction.
+*   `mammoth` (`^1.12.0`): DOCX extraction.
+*   `cors` (`^2.8.6`): CORS interceptor.
+*   `dotenv` (`^17.4.0`): Environment variable loader.
 
 ### 7.2 Frontend Dependencies (`client/package.json`)
-| Package | Version | Role |
-|---------|---------|------|
-| `react` | ^19.2.4 | UI component library |
-| `react-dom` | ^19.2.4 | DOM rendering engine |
-| `react-router-dom` | ^7.14.0 | Client-side routing (7 routes) |
-| `@react-oauth/google` | ^0.13.5 | Google OAuth provider and login button for React |
-| `axios` | ^1.14.0 | HTTP client with interceptor support |
-| `html2canvas` | ^1.4.1 | DOM-to-canvas screenshot capture for PDF export |
-| `jspdf` | ^4.2.1 | PDF document generation engine |
-| `lucide-react` | ^1.7.0 | Modern icon set (used throughout UI) |
-| `tailwindcss` | ^3.4.19 | Utility-first CSS framework |
-| `vite` | ^8.0.4 | Build tool and dev server |
-| `@vitejs/plugin-react` | ^6.0.1 | React Fast Refresh for Vite |
+*   `react` (`^19.2.4`) & `react-dom` (`^19.2.4`): Core React libraries.
+*   `react-router-dom` (`^7.14.0`): Routing provider.
+*   `@react-oauth/google` (`^0.13.5`): Google Auth helper.
+*   `axios` (`^1.14.0`): HTTP requests.
+*   `html2canvas` (`^1.4.1`): DOM-to-canvas rendering.
+*   `jspdf` (`^4.2.1`): PDF builder (lazy-loaded).
+*   `lucide-react` (`^1.7.0`): Vector icons.
+*   `tailwindcss` (`^3.4.19`): Main CSS toolkit.
+*   `vite` (`^8.0.4`): Build and dev server.
 
 ### 7.3 Environment Configuration (`.env`)
-| Variable | Required | Context |
-|----------|----------|---------|
-| `MONGO_URI` | ✅ | MongoDB Atlas connection string |
-| `JWT_SECRET` | ✅ | Private key for signing/verifying JWTs |
-| `GEMINI_API_KEY` | ✅ | Google AI Studio API key for Gemini |
-| `GOOGLE_CLIENT_ID` | ✅ | GCP OAuth 2.0 Client ID (also hardcoded in `App.jsx` for the frontend provider) |
-| `EMAIL_USER` | ✅ | Gmail address for sending verification emails |
-| `EMAIL_PASS` | ✅ | Gmail App Password (not the account password) |
-| `CLIENT_URL` | ⚠️ | Frontend origin for CORS. Defaults to `http://localhost:5173` |
-| `PORT` | ⚠️ | Server port. Defaults to `5000` |
-
----
+*   `MONGO_URI` (Required): Database connection string.
+*   `JWT_SECRET` (Required): Encryption signature salt.
+*   `GEMINI_API_KEY` (Required): Google Generative AI credentials.
+*   `GOOGLE_CLIENT_ID` (Required): Scoped Google OAuth application ID.
+*   `EMAIL_USER` (Required): Host email address.
+*   `EMAIL_PASS` (Required): Host SMTP application access password.
