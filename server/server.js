@@ -98,6 +98,16 @@ const humanizeLimiter = rateLimit({
 });
 app.use('/api/resume/humanize', humanizeLimiter);
 
+// Strict limiter for parsing files (DOCX/PDF) to prevent resource exhaustion
+const parseLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // Max 15 parser requests per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many document upload attempts. Please try again later.' },
+});
+app.use('/api/resume/parse', parseLimiter);
+
 // 3. Strict limiter for email sending and verification to prevent OTP spam/brute-force
 const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes

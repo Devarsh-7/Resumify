@@ -202,23 +202,72 @@ const deleteAnalysis = async (req, res) => {
   }
 };
 
+// @desc    Get a single resume from the vault (including text)
+// @route   GET /api/resume/vault/:id
+const getResumeById = async (req, res) => {
+  try {
+    const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
+    if (!resume) return res.status(404).json({ message: 'Resume not found' });
+    res.json(resume);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch resume details' });
+  }
+};
+
+// @desc    Upload and parse a resume file, syncing to vault
+// @route   POST /api/resume/parse
+const parseResumeFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Please upload a resume file (PDF or DOCX)' });
+    }
+
+    console.log(`📄 Parsing resume for humanization: ${req.file.originalname}`);
+
+    // Step 1: Extract text from the resume file
+    const resumeText = await parseResume(req.file.path);
+    console.log(`✅ Text extracted: ${resumeText.length} characters`);
+
+    // Step 2: Sync to Resume Vault (Save the text for re-use)
+    const resume = await Resume.findOneAndUpdate(
+      { user: req.user._id, fileName: req.file.originalname },
+      { resumeText: resumeText, createdAt: Date.now() },
+      { upsert: true, new: true }
+    );
+
+    res.status(200).json({
+      message: 'Resume parsed and saved to vault successfully!',
+      resume: {
+        _id: resume._id,
+        fileName: resume.fileName,
+        resumeText: resume.resumeText,
+        createdAt: resume.createdAt,
+      }
+    });
+  } catch (error) {
+    console.error('Resume parsing error:', error.message);
+    res.status(500).json({ message: error.message || 'Failed to parse resume' });
+  }
+};
+
 // @desc    Detect AI-generated content and humanize text
 // @route   POST /api/resume/humanize
 // @access  Private (login required)
 const humanizeText = async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, type } = req.body;
 
     if (!text || text.trim().length < 20) {
       return res.status(400).json({ message: 'Please provide text of at least 20 characters.' });
     }
 
-    if (text.length > 5000) {
-      return res.status(400).json({ message: 'Text exceeds the 5000 character limit.' });
+    const maxLimit = type === 'overall' ? 15000 : 5000;
+    if (text.length > maxLimit) {
+      return res.status(400).json({ message: `Text exceeds the ${maxLimit} character limit.` });
     }
 
-    console.log(`🤖 Humanizing text segment (${text.length} chars) for user ${req.user._id}...`);
-    const result = await humanizeAI(text);
+    console.log(`🤖 Humanizing text segment (${text.length} chars, type: ${type || 'section'}) for user ${req.user._id}...`);
+    const result = await humanizeAI(text, type);
     console.log('✅ Humanization analysis complete!');
 
     res.json(result);
@@ -228,4 +277,15 @@ const humanizeText = async (req, res) => {
   }
 };
 
-module.exports = { upload, analyzeResume, getHistory, getAnalysis, deleteAnalysis, getVault, deleteResume, humanizeText };
+module.exports = {
+  upload,
+  analyzeResume,
+  getHistory,
+  getAnalysis,
+  deleteAnalysis,
+  getVault,
+  deleteResume,
+  getResumeById,
+  parseResumeFile,
+  humanizeText
+};

@@ -82,16 +82,17 @@ const humanizeSchema = {
 /**
  * Detect AI-generated text and suggest humanizing improvements
  * @param {string} text - The input text segment
+ * @param {string} type - The optimization pathway: 'section' or 'overall'
  * @returns {Promise<Object>} - Detection and humanization results
  */
-const humanizeAI = async (text) => {
+const humanizeAI = async (text, type = 'section') => {
   if (!text || text.trim().length === 0) {
     throw new Error('No text provided for analysis.');
   }
 
   // Configure the model with structured JSON output
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.1-flash-lite',
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: humanizeSchema,
@@ -107,6 +108,12 @@ Analyze the following text to detect AI-generated content. Look for:
 3. Lack of direct, active voice (overuse of passive or nominalized constructions like "was responsible for the management of" instead of "managed").
 
 Then, rewrite the text to make it sound highly human-like, professional, authentic, and compelling. Ensure the rewritten text preserves the exact original details, achievements, and technical data.
+
+${type === 'overall' ? 'IMPORTANT: You are optimizing an entire resume. Please preserve the structure and layout (such as section headers, lists, and spacing) while applying humanization to the text content.' : 'IMPORTANT: You are optimizing a specific segment of a resume (such as a summary or a single bullet point/job description). Ensure the rewritten version is punchy, concise, and professional.'}
+
+CRITICAL OUTPUT CONSTRAINTS:
+- The "explanations" array must contain a MAXIMUM of 6 high-value replacement items representing the most meaningful adjustments to prevent response truncation.
+- Each "originalPhrase" and "humanizedPhrase" MUST consist of at least 2 words (minimum 6 characters total) to prevent false matches or collisions during display.
 
 Output your response matching the requested JSON schema exactly.
 

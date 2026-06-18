@@ -9,13 +9,17 @@ const {
   deleteAnalysis,
   getVault,
   deleteResume,
+  getResumeById,
+  parseResumeFile,
   humanizeText,
 } = require('../controllers/resumeController');
 
 // All resume routes are protected (login required)
 router.post('/analyze', protect, upload.single('resume'), analyzeResume);
+router.post('/parse', protect, upload.single('resume'), parseResumeFile);
 router.get('/history', protect, getHistory);
 router.get('/vault', protect, getVault);
+router.get('/vault/:id', protect, getResumeById);
 router.get('/analysis/:id', protect, getAnalysis);
 router.delete('/analysis/:id', protect, deleteAnalysis);
 router.delete('/vault/:id', protect, deleteResume);
