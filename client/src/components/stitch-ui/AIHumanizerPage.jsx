@@ -27,6 +27,7 @@ const AIHumanizerPage = () => {
   const isSyncingRightScroll = useRef(false);
 
   const handleLeftScroll = () => {
+    if (window.innerWidth < 768) return; // Disable scroll sync on mobile/vertical stack
     if (isSyncingLeftScroll.current) {
       isSyncingLeftScroll.current = false;
       return;
@@ -47,6 +48,7 @@ const AIHumanizerPage = () => {
   };
 
   const handleRightScroll = () => {
+    if (window.innerWidth < 768) return; // Disable scroll sync on mobile/vertical stack
     if (isSyncingRightScroll.current) {
       isSyncingRightScroll.current = false;
       return;
@@ -382,14 +384,15 @@ const AIHumanizerPage = () => {
     });
   };
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const maxCharLimit = optimizationType === 'overall' ? 15000 : 5000;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex font-manrope transition-colors duration-300">
-      <Navbar isLoggedIn={true} />
-      <Sidebar activeTab="AI Humanizer" />
+      <Navbar isLoggedIn={true} onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
+      <Sidebar activeTab="AI Humanizer" isMobileOpen={isMobileSidebarOpen} onCloseMobile={() => setIsMobileSidebarOpen(false)} />
 
-      <main className="flex-1 ml-64 pt-24 p-8">
+      <main className="flex-1 ml-0 md:ml-64 px-6 md:px-8 pb-8 pt-28 md:pt-32">
         <div className="max-w-5xl mx-auto space-y-12">
           {/* Header */}
           <header className="flex justify-between items-end">
@@ -404,10 +407,10 @@ const AIHumanizerPage = () => {
             <div className="flex items-center gap-4">
               <button 
                 onClick={toggleTheme}
-                className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors"
+                className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 active:scale-95"
                 title="Toggle Theme"
               >
-                <span className="material-symbols-rounded">{theme === 'dark' ? 'dark_mode' : 'light_mode'}</span>
+                <span key={theme} className="material-symbols-rounded animate-theme-toggle">{theme === 'dark' ? 'dark_mode' : 'light_mode'}</span>
               </button>
             </div>
           </header>

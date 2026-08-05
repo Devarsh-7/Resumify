@@ -81,12 +81,14 @@ const ProfilePage = () => {
     }
   };
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex font-manrope transition-colors duration-300">
-      <Navbar isLoggedIn={true} />
-      <Sidebar activeTab="Profile" />
+      <Navbar isLoggedIn={true} onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
+      <Sidebar activeTab="Profile" isMobileOpen={isMobileSidebarOpen} onCloseMobile={() => setIsMobileSidebarOpen(false)} />
       
-      <main className="flex-1 ml-64 pt-24 p-8">
+      <main className="flex-1 ml-0 md:ml-64 px-6 md:px-8 pb-8 pt-28 md:pt-32">
         <div className="max-w-4xl mx-auto space-y-8">
           
           <header className="mb-12">
@@ -128,19 +130,19 @@ const ProfilePage = () => {
                
                <div className="flex-1 space-y-6">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Full Name</label>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Full Name</label>
                     <input type="text" name="name" value={formData.name} onChange={handleChange} required
-                           className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" />
+                           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Email Address</label>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Email Address</label>
                     <input type="email" name="email" value={formData.email} onChange={handleChange} required
-                           className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" />
+                           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">New Password (Optional)</label>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">New Password (Optional)</label>
                     <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Leave blank to keep current password" minLength={6}
-                           className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" />
+                           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" />
                   </div>
                </div>
             </div>
@@ -149,25 +151,25 @@ const ProfilePage = () => {
             <div className="bg-white dark:bg-slate-800 p-8 rounded-[32px] border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-12 transition-colors duration-300">
                <div className="md:w-1/3">
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2 transition-colors">Career Defaults</h2>
-                  <p className="text-sm text-slate-500 leading-relaxed">Storing these allows the AI to provide relevant advice automatically even when you don't paste a job description.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Storing these allows the AI to provide relevant advice automatically even when you don't paste a job description.</p>
                </div>
                
                <div className="flex-1 space-y-6">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Target Job Title</label>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Target Job Title</label>
                     <input type="text" name="targetRole" value={formData.targetRole} onChange={handleChange} placeholder="e.g. Senior Frontend Engineer"
-                           className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" />
+                           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" />
                   </div>
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Industry</label>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Industry</label>
                       <input type="text" name="industry" value={formData.industry} onChange={handleChange} placeholder="e.g. Technology"
-                             className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" />
+                             className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Experience Level</label>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Experience Level</label>
                       <select name="experienceLevel" value={formData.experienceLevel} onChange={handleChange}
-                              className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none">
+                              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors appearance-none">
                         <option value="">Select Level...</option>
                         <option value="Entry-level">Entry-level (0-2 years)</option>
                         <option value="Mid-level">Mid-level (3-5 years)</option>
@@ -183,16 +185,16 @@ const ProfilePage = () => {
             <div className="bg-white dark:bg-slate-800 p-8 rounded-[32px] border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-12 transition-colors duration-300">
                <div className="md:w-1/3">
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2 transition-colors">App Preferences</h2>
-                  <p className="text-sm text-slate-500 leading-relaxed">Customize your viewing experience and interface settings.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Customize your viewing experience and interface settings.</p>
                </div>
                
                <div className="flex-1 space-y-6 flex items-center">
-                  <div className="flex items-center justify-between w-full p-4 border border-slate-100 rounded-2xl bg-slate-50">
+                  <div className="flex items-center justify-between w-full p-4 border border-slate-100 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-900/50">
                     <div className="flex items-center gap-3">
-                      <span className="material-symbols-rounded text-blue-600">{localStorage.getItem('theme') === 'dark' ? 'dark_mode' : 'light_mode'}</span>
+                      <span className="material-symbols-rounded text-blue-600 dark:text-blue-400">{localStorage.getItem('theme') === 'dark' ? 'dark_mode' : 'light_mode'}</span>
                       <div>
-                        <p className="font-bold text-slate-900 text-sm">Theme Appearance</p>
-                        <p className="text-xs text-slate-500">Toggle between light and dark modes.</p>
+                        <p className="font-bold text-slate-900 dark:text-white text-sm">Theme Appearance</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Toggle between light and dark modes.</p>
                       </div>
                     </div>
                     <button 

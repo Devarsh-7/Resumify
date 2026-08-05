@@ -67,6 +67,8 @@ const MyResumesPage = () => {
     navigate(`/analysis/${id}?download=true`);
   };
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   const filteredHistory = history.filter(item => 
     item.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.jobTitle.toLowerCase().includes(searchTerm.toLowerCase())
@@ -78,10 +80,10 @@ const MyResumesPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex font-manrope transition-colors duration-300">
-      <Navbar isLoggedIn={true} />
-      <Sidebar activeTab="My Resumes" />
+      <Navbar isLoggedIn={true} onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
+      <Sidebar activeTab="My Resumes" isMobileOpen={isMobileSidebarOpen} onCloseMobile={() => setIsMobileSidebarOpen(false)} />
       
-      <main className="flex-1 ml-64 pt-24 p-8">
+      <main className="flex-1 ml-0 md:ml-64 px-6 md:px-8 pb-8 pt-28 md:pt-32">
         <div className="max-w-6xl mx-auto space-y-8">
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
@@ -96,8 +98,16 @@ const MyResumesPage = () => {
                 placeholder="Search resumes or roles..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-12 pr-4 py-3 text-sm focus:border-blue-500 dark:focus:border-blue-400 outline-none shadow-sm dark:text-white transition-all flex items-center"
+                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-12 pr-10 py-3 text-sm focus:border-blue-500 dark:focus:border-blue-400 outline-none shadow-sm dark:text-white transition-all flex items-center"
               />
+              {searchTerm && (
+                <button 
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <span className="material-symbols-rounded text-sm">close</span>
+                </button>
+              )}
             </div>
           </header>
 
@@ -131,9 +141,19 @@ const MyResumesPage = () => {
                     <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center text-slate-400 mx-auto mb-6">
                       <span className="material-symbols-rounded text-3xl">folder_off</span>
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Vault is empty</h3>
-                    <p className="text-slate-500 mb-8 max-w-sm mx-auto">Upload a new resume on the dashboard to automatically store it in your localized vault for quick re-analysis!</p>
-                    <Link to="/dashboard" className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 dark:shadow-blue-950/60 hover:bg-blue-700 transition-all inline-block">Go to Dashboard</Link>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                      {searchTerm ? 'No vault matches found' : 'Vault is empty'}
+                    </h3>
+                    <p className="text-slate-500 mb-8 max-w-sm mx-auto">
+                      {searchTerm ? `No resumes in your vault match "${searchTerm}".` : 'Upload a new resume on the dashboard to automatically store it in your localized vault for quick re-analysis!'}
+                    </p>
+                    {searchTerm ? (
+                      <button onClick={() => setSearchTerm('')} className="px-8 py-4 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl font-bold hover:bg-slate-200 transition-all inline-block">
+                        Clear Search Filter
+                      </button>
+                    ) : (
+                      <Link to="/dashboard" className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 dark:shadow-blue-950/60 hover:bg-blue-700 transition-all inline-block">Go to Dashboard</Link>
+                    )}
                   </div>
                 ) : (
                   filteredVault.map((item) => (

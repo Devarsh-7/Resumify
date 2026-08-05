@@ -2,7 +2,7 @@ import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 
-const Navbar = () => {
+const Navbar = ({ onToggleMobileSidebar }) => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,12 +37,23 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">R</div>
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 dark:from-white to-blue-600 dark:to-blue-400 transition-colors">
-            Resumify AI
-          </span>
-        </Link>
+        <div className="flex items-center gap-3">
+          {onToggleMobileSidebar && (
+            <button 
+              onClick={onToggleMobileSidebar}
+              className="p-2 md:hidden text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              title="Toggle Menu"
+            >
+              <span className="material-symbols-rounded text-2xl">menu</span>
+            </button>
+          )}
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">R</div>
+            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 dark:from-white to-blue-600 dark:to-blue-400 transition-colors">
+              Resumify AI
+            </span>
+          </Link>
+        </div>
         
         <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600 dark:text-slate-300">
           <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Features</a>

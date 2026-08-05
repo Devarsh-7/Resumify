@@ -26,7 +26,7 @@ const LandingPage = () => {
       
       <main>
         {/* Hero Section */}
-        <section className="pt-20 pb-20 px-6 max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+        <section className="pt-8 pb-20 px-6 max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-xs font-bold tracking-wider uppercase transition-colors">
               <span className="material-symbols-rounded text-sm">auto_awesome</span> Next-Gen Analysis Powered by AI

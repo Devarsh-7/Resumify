@@ -107,6 +107,8 @@ const Dashboard = () => {
     }
   };
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   const handleQuickDownload = (item) => {
     // Navigate to results page with auto-download param
     navigate(`/analysis/${item._id}?download=true`);
@@ -114,10 +116,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex font-manrope transition-colors duration-300">
-      <Navbar isLoggedIn={true} />
-      <Sidebar activeTab="Dashboard" />
+      <Navbar isLoggedIn={true} onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
+      <Sidebar activeTab="Dashboard" isMobileOpen={isMobileSidebarOpen} onCloseMobile={() => setIsMobileSidebarOpen(false)} />
       
-      <main className="flex-1 ml-64 pt-24 p-8">
+      <main className="flex-1 ml-0 md:ml-64 px-6 md:px-8 pb-8 pt-28 md:pt-32">
         <div className="max-w-5xl mx-auto space-y-12">
           <header className="flex justify-between items-end">
             <div>
@@ -127,16 +129,16 @@ const Dashboard = () => {
             <div className="flex items-center gap-4">
               <button 
                  onClick={toggleTheme}
-                 className="w-12 h-12 rounded-xl bg-white border border-slate-100 shadow-sm flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors"
+                 className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 active:scale-95"
                  title="Toggle Theme"
               >
-                <span className="material-symbols-rounded">{theme === 'dark' ? 'dark_mode' : 'light_mode'}</span>
+                <span key={theme} className="material-symbols-rounded animate-theme-toggle">{theme === 'dark' ? 'dark_mode' : 'light_mode'}</span>
               </button>
 
               <div className="bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-sm flex items-center gap-3 border border-slate-100 dark:border-slate-700 transition-colors">
                  <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=DBEAFE&color=3B82F6`} 
                       className="w-12 h-12 rounded-xl" alt="Avatar" />
-                 <div className="pr-4">
+                 <div className="pr-4 hidden sm:block">
                    <p className="text-sm font-bold text-slate-900 dark:text-white transition-colors">{user?.name}</p>
                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Pro Account</p>
                  </div>
@@ -149,7 +151,7 @@ const Dashboard = () => {
               {/* Upload Area */}
               <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[32px] p-8 shadow-sm transition-colors duration-300">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2 transition-colors">Analyze New Resume</h2>
-                <div className="bg-blue-50 text-blue-700 text-xs font-bold p-3 rounded-xl mb-4 text-left flex items-start gap-2">
+                <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold p-3 rounded-xl mb-4 text-left flex items-start gap-2">
                   <span className="material-symbols-rounded text-sm">info</span>
                   <p>Optional: Leave blank for a General ATS Compatibility check, or paste a job description for a Targeted Analysis.</p>
                 </div>
@@ -185,7 +187,17 @@ const Dashboard = () => {
                   <Link to="/resumes" state={{ activeTab: 'History' }} className="text-blue-600 text-sm font-bold">View All</Link>
                 </div>
                 {loading ? (
-                  <p className="text-slate-400 px-4">Loading history...</p>
+                  <div className="space-y-3">
+                    {[1, 2].map((n) => (
+                      <div key={n} className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 flex items-center gap-6 animate-pulse">
+                        <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3"></div>
+                          <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-1/2"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : history.length === 0 ? (
                   <p className="text-slate-400 px-4">No analyses found. Upload a resume to begin.</p>
                 ) : (
