@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     // Not required for Google OAuth users
     minlength: 6,
+    select: false,
   },
   authProvider: {
     type: String,
@@ -41,12 +42,14 @@ const userSchema = new mongoose.Schema({
   },
   verificationCode: {
     type: String,
+    select: false,
   },
   verificationCodeExpires: {
     type: Date,
   },
   resetPasswordCode: {
     type: String,
+    select: false,
   },
   resetPasswordExpires: {
     type: Date,

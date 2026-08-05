@@ -1,31 +1,32 @@
 const multer = require('multer');
 const path = require('path');
+const mongoose = require('mongoose');
 const Analysis = require('../models/Analysis');
 const Resume = require('../models/Resume');
 const parseResume = require('../utils/parseResume');
 const analyzeWithAI = require('../utils/analyzeWithAI');
 const humanizeAI = require('../utils/humanizeAI');
+const { sanitizeString } = require('../utils/sanitizeInput');
 
-// Configure Multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, path.join(__dirname, '../uploads'));
   },
   filename: function (req, file, cb) {
-    // Create unique filename: userId-timestamp-originalname
     const uniqueName = `${req.user._id}-${Date.now()}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
   },
 });
 
-// Filter: only allow PDF and DOCX files
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   ];
+  const allowedExts = ['.pdf', '.docx'];
+  const ext = path.extname(file.originalname).toLowerCase();
 
-  if (allowedTypes.includes(file.mimetype)) {
+  if (allowedTypes.includes(file.mimetype) && allowedExts.includes(ext)) {
     cb(null, true);
   } else {
     cb(new Error('Only PDF and DOCX files are allowed'), false);
@@ -35,35 +36,22 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-// @desc    Analyze a resume against a job description
-// @route   POST /api/resume/analyze
-// @access  Private (login required)
 const analyzeResume = async (req, res) => {
   try {
-    // Check if file was uploaded
     if (!req.file) {
       return res.status(400).json({ message: 'Please upload a resume file (PDF or DOCX)' });
     }
 
-    // Fetch optional job description
-    const { jobDescription } = req.body;
+    const rawJobDesc = req.body.jobDescription || '';
+    const jobDescription = sanitizeString(rawJobDesc);
     const isGeneral = !jobDescription || jobDescription.trim().length === 0;
 
-    console.log(`📄 Processing resume: ${req.file.originalname}`);
-
-    // Step 1: Extract text from the resume file
     const resumeText = await parseResume(req.file.path);
-    console.log(`✅ Text extracted: ${resumeText.length} characters`);
-
-    // Step 2: Analyze with Gemini AI
-    console.log('🤖 Sending to Gemini AI for analysis...');
     const aiResult = await analyzeWithAI(resumeText, jobDescription);
-    console.log(`✅ AI analysis complete. ATS Score: ${isGeneral ? aiResult.score : aiResult.atsScore}`);
 
-    // Step 3: Save analysis to database
     const analysis = await Analysis.create({
       user: req.user._id,
       fileName: req.file.originalname,
@@ -76,7 +64,6 @@ const analyzeResume = async (req, res) => {
       strengths: aiResult.strengths || [],
     });
 
-    // Step 4: Sync to Resume Vault (Save the text for re-use) in the background
     Resume.findOneAndUpdate(
       { user: req.user._id, fileName: req.file.originalname },
       { resumeText: resumeText, createdAt: Date.now() },
@@ -85,7 +72,6 @@ const analyzeResume = async (req, res) => {
       console.error('Background Resume Vault sync error:', err.message);
     });
 
-    // Step 5: Return the results
     res.status(201).json({
       message: 'Resume analyzed successfully!',
       analysis: {
@@ -106,8 +92,6 @@ const analyzeResume = async (req, res) => {
   }
 };
 
-// @desc    Get all resumes in the vault for the logged-in user
-// @route   GET /api/resume/vault
 const getVault = async (req, res) => {
   try {
     const resumes = await Resume.find({ user: req.user._id })
@@ -119,10 +103,11 @@ const getVault = async (req, res) => {
   }
 };
 
-// @desc    Delete a resume from the vault
-// @route   DELETE /api/resume/vault/:id
 const deleteResume = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: 'Resume not found' });
+    }
     const resume = await Resume.findOneAndDelete({ _id: req.params.id, user: req.user._id });
     if (!resume) return res.status(404).json({ message: 'Resume not found' });
     res.json({ message: 'Resume deleted from vault' });
@@ -131,13 +116,10 @@ const deleteResume = async (req, res) => {
   }
 };
 
-// @desc    Get analysis history for the logged-in user
-// @route   GET /api/resume/history
-// @access  Private (login required)
 const getHistory = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 0;
-    const page = parseInt(req.query.page) || 1;
+    const limit = Math.max(0, Math.min(100, parseInt(req.query.limit, 10) || 0));
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const skip = (page - 1) * limit;
 
     const total = await Analysis.countDocuments({ user: req.user._id });
@@ -145,8 +127,8 @@ const getHistory = async (req, res) => {
     res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
 
     let query = Analysis.find({ user: req.user._id })
-      .sort({ analyzedAt: -1 }) // Newest first
-      .select('-jobDescription'); // Don't send full JD text in list view
+      .sort({ analyzedAt: -1 })
+      .select('-jobDescription');
 
     if (limit > 0) {
       query = query.skip(skip).limit(limit);
@@ -160,14 +142,14 @@ const getHistory = async (req, res) => {
   }
 };
 
-// @desc    Get a single analysis by ID
-// @route   GET /api/resume/analysis/:id
-// @access  Private (login required)
 const getAnalysis = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: 'Analysis not found' });
+    }
     const analysis = await Analysis.findOne({
       _id: req.params.id,
-      user: req.user._id, // Ensure user can only access their own analyses
+      user: req.user._id,
     });
 
     if (!analysis) {
@@ -181,11 +163,11 @@ const getAnalysis = async (req, res) => {
   }
 };
 
-// @desc    Delete an analysis
-// @route   DELETE /api/resume/analysis/:id
-// @access  Private
 const deleteAnalysis = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: 'Analysis not found' });
+    }
     const analysis = await Analysis.findOneAndDelete({
       _id: req.params.id,
       user: req.user._id,
@@ -202,10 +184,11 @@ const deleteAnalysis = async (req, res) => {
   }
 };
 
-// @desc    Get a single resume from the vault (including text)
-// @route   GET /api/resume/vault/:id
 const getResumeById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: 'Resume not found' });
+    }
     const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
     if (!resume) return res.status(404).json({ message: 'Resume not found' });
     res.json(resume);
@@ -214,21 +197,13 @@ const getResumeById = async (req, res) => {
   }
 };
 
-// @desc    Upload and parse a resume file, syncing to vault
-// @route   POST /api/resume/parse
 const parseResumeFile = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'Please upload a resume file (PDF or DOCX)' });
     }
 
-    console.log(`📄 Parsing resume for humanization: ${req.file.originalname}`);
-
-    // Step 1: Extract text from the resume file
     const resumeText = await parseResume(req.file.path);
-    console.log(`✅ Text extracted: ${resumeText.length} characters`);
-
-    // Step 2: Sync to Resume Vault (Save the text for re-use)
     const resume = await Resume.findOneAndUpdate(
       { user: req.user._id, fileName: req.file.originalname },
       { resumeText: resumeText, createdAt: Date.now() },
@@ -250,15 +225,14 @@ const parseResumeFile = async (req, res) => {
   }
 };
 
-// @desc    Detect AI-generated content and humanize text
-// @route   POST /api/resume/humanize
-// @access  Private (login required)
 const humanizeText = async (req, res) => {
   try {
-    const { text, type } = req.body;
+    const rawText = req.body.text;
+    const type = sanitizeString(req.body.type || '');
+    const text = typeof rawText === 'string' ? sanitizeString(rawText) : '';
 
     if (!text || text.trim().length < 20) {
-      return res.status(400).json({ message: 'Please provide text of at least 20 characters.' });
+      return res.status(400).json({ message: 'Please provide valid text of at least 20 characters.' });
     }
 
     const maxLimit = type === 'overall' ? 15000 : 5000;
@@ -266,10 +240,7 @@ const humanizeText = async (req, res) => {
       return res.status(400).json({ message: `Text exceeds the ${maxLimit} character limit.` });
     }
 
-    console.log(`🤖 Humanizing text segment (${text.length} chars, type: ${type || 'section'}) for user ${req.user._id}...`);
     const result = await humanizeAI(text, type);
-    console.log('✅ Humanization analysis complete!');
-
     res.json(result);
   } catch (error) {
     console.error('Humanizer controller error:', error.message);

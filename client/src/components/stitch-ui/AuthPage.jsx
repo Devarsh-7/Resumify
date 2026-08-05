@@ -152,7 +152,7 @@ const AuthPage = () => {
 
           {/* Google Sign-In Button */}
           <div className="flex justify-center">
-            <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "555370562989-ao28bdk917fo1o2vlmihm4kngqtdg3u9.apps.googleusercontent.com"}>
+            <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
               <GoogleLogin
                 onSuccess={async (credentialResponse) => {
                   try {
