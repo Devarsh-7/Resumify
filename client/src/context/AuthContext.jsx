@@ -10,13 +10,13 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      // Validate token and get user info
-      api.get('/auth/me')
+      // Validate token and get user info with a 5s fallback timeout
+      api.get('/auth/me', { timeout: 5000 })
         .then(res => {
           setUser(res.data);
         })
         .catch(err => {
-          console.error("Token invalid:", err);
+          console.error("Token invalid or request timed out:", err);
           localStorage.removeItem('token');
         })
         .finally(() => {

@@ -177,16 +177,7 @@ process.on('uncaughtException', (err) => {
 
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(async () => {
-  const User = require('./models/User');
-  const result = await User.updateMany(
-    { verificationCode: { $exists: false }, isVerified: { $ne: true } },
-    { $set: { isVerified: true } }
-  );
-  if (result.modifiedCount > 0) {
-    console.log(`Migrated ${result.modifiedCount} legacy user(s) to verified status.`);
-  }
-
+connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Resumify server running on port ${PORT}`);
   });
