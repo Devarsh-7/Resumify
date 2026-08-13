@@ -95,6 +95,14 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint (supports both /health and /api/health for uptime monitors like UptimeRobot)
+app.get(['/health', '/api/health'], (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Block scrapers and automated bots
 app.use('/api', botProtection);
 
@@ -139,16 +147,6 @@ app.use('/api/resume/parse', parseLimiter);
 // API routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/resume', require('./routes/resumeRoutes'));
-
-// Health check
-app.get('/api/health', (req, res) => {
-  const dbOk = mongoose.connection.readyState === 1;
-  res.status(dbOk ? 200 : 503).json({
-    status: dbOk ? 'ok' : 'degraded',
-    db: dbOk ? 'connected' : 'disconnected',
-    message: dbOk ? 'Resumify API is running' : 'API is running but database is unreachable',
-  });
-});
 
 // Error handling for Multer and CORS
 app.use((err, req, res, next) => {
