@@ -64,8 +64,11 @@ const ForgotPasswordPage = () => {
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-slate-700 dark:text-slate-300 tracking-wide">Email Address</label>
               <input 
-                type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white dark:bg-slate-800 border-0 border-b-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-4 py-3 rounded-t-lg focus:ring-0 focus:border-blue-600 dark:focus:border-blue-400 transition-colors outline-none font-medium" 
+                type="email" 
+                required 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-400 transition-colors font-medium text-base placeholder:text-slate-400 dark:placeholder:text-slate-500" 
                 placeholder="alex@example.com"
               />
             </div>

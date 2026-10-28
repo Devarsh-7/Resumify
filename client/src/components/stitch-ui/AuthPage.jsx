@@ -7,6 +7,7 @@ const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   
   const { user, login, signup, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -99,8 +100,12 @@ const AuthPage = () => {
               <div className="space-y-1.5">
                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 tracking-wide">Full Name</label>
                 <input 
-                  type="text" name="name" required={!isLogin} value={formData.name} onChange={handleChange}
-                  className="w-full bg-white dark:bg-slate-800 border-0 border-b-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-4 py-3 rounded-t-lg focus:ring-0 focus:border-blue-600 dark:focus:border-blue-400 transition-colors outline-none font-medium" 
+                  type="text" 
+                  name="name" 
+                  required={!isLogin} 
+                  value={formData.name} 
+                  onChange={handleChange}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-400 transition-colors font-medium text-base placeholder:text-slate-400 dark:placeholder:text-slate-500" 
                   placeholder="Alex Rivera"
                 />
               </div>
@@ -109,8 +114,12 @@ const AuthPage = () => {
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-slate-700 dark:text-slate-300 tracking-wide">Email Address</label>
               <input 
-                type="email" name="email" required value={formData.email} onChange={handleChange}
-                className="w-full bg-white dark:bg-slate-800 border-0 border-b-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-4 py-3 rounded-t-lg focus:ring-0 focus:border-blue-600 dark:focus:border-blue-400 transition-colors outline-none font-medium" 
+                type="email" 
+                name="email" 
+                required 
+                value={formData.email} 
+                onChange={handleChange}
+                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-400 transition-colors font-medium text-base placeholder:text-slate-400 dark:placeholder:text-slate-500" 
                 placeholder="alex@example.com"
               />
             </div>
@@ -120,11 +129,27 @@ const AuthPage = () => {
                 <span>Password</span>
                 {isLogin && <a href="/forgot-password" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="text-blue-600 dark:text-blue-400 hover:underline">Forgot?</a>}
               </label>
-              <input 
-                type="password" name="password" required value={formData.password} onChange={handleChange}
-                className="w-full bg-white dark:bg-slate-800 border-0 border-b-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-4 py-3 rounded-t-lg focus:ring-0 focus:border-blue-600 dark:focus:border-blue-400 transition-colors outline-none font-medium" 
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  name="password" 
+                  required 
+                  value={formData.password} 
+                  onChange={handleChange}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white pl-4 pr-12 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-400 transition-colors font-medium text-base placeholder:text-slate-400 dark:placeholder:text-slate-500" 
+                  placeholder={isLogin ? "Enter your password" : "At least 6 characters"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  <span className="material-symbols-rounded text-[20px]">
+                    {showPassword ? "visibility_off" : "visibility"}
+                  </span>
+                </button>
+              </div>
             </div>
 
             <button

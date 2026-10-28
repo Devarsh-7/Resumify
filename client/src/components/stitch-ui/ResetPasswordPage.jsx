@@ -11,6 +11,7 @@ const ResetPasswordPage = () => {
 
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -148,11 +149,26 @@ const ResetPasswordPage = () => {
               {/* New Password Input */}
               <div className="space-y-1.5 mb-8">
                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 tracking-wide">New Password</label>
-                <input 
-                  type="password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-800 border-0 border-b-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-4 py-3 rounded-t-lg focus:ring-0 focus:border-blue-600 dark:focus:border-blue-400 transition-colors outline-none font-medium" 
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    required 
+                    value={newPassword} 
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white pl-4 pr-12 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-400 transition-colors font-medium text-base placeholder:text-slate-400 dark:placeholder:text-slate-500" 
+                    placeholder="Enter at least 6 characters"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    <span className="material-symbols-rounded text-[20px]">
+                      {showPassword ? "visibility_off" : "visibility"}
+                    </span>
+                  </button>
+                </div>
               </div>
 
               {/* Reset Button */}
