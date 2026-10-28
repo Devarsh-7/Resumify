@@ -7,15 +7,23 @@ const { protect } = require('../middleware/auth');
 // Rate limiting configurations for auth endpoints
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: process.env.NODE_ENV === 'production' ? 15 : 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many login attempts. Please try again after 15 minutes.' },
 });
 
+const googleAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 30 : 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many Google sign-in attempts. Please try again after 15 minutes.' },
+});
+
 const signupLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 3,
+  max: process.env.NODE_ENV === 'production' ? 10 : 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many accounts created from this IP. Please try again later.' },
@@ -40,7 +48,7 @@ const otpLimiter = rateLimit({
 // Public authentication routes
 router.post('/signup', signupLimiter, signup);
 router.post('/login', loginLimiter, login);
-router.post('/google', loginLimiter, googleLogin);
+router.post('/google', googleAuthLimiter, googleLogin);
 router.post('/verify-email', otpLimiter, verifyEmail);
 router.post('/resend-code', otpLimiter, resendCode);
 router.post('/forgot-password', passwordResetLimiter, requestPasswordReset);

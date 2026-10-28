@@ -97,7 +97,8 @@ const signup = async (req, res) => {
 
 const verifyEmail = async (req, res) => {
   try {
-    const { email, code } = req.body;
+    const email = sanitizeString((req.body.email || '').toLowerCase());
+    const { code } = req.body;
 
     if (!email || !code) {
       return res.status(400).json({ message: 'Please provide email and verification code' });
@@ -143,7 +144,7 @@ const verifyEmail = async (req, res) => {
 
 const resendCode = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = sanitizeString((req.body.email || '').toLowerCase());
 
     if (!email) {
       return res.status(400).json({ message: 'Please provide an email' });
@@ -305,8 +306,9 @@ const googleLogin = async (req, res) => {
 
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
+    const normalizedEmail = (email || '').toLowerCase().trim();
 
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email: normalizedEmail });
 
     if (user) {
       if (user.authProvider === 'local' && !user.googleId) {
@@ -318,7 +320,7 @@ const googleLogin = async (req, res) => {
     } else {
       user = await User.create({
         name,
-        email,
+        email: normalizedEmail,
         googleId,
         avatar: picture,
         authProvider: 'google',
@@ -357,7 +359,7 @@ const deleteAccount = async (req, res) => {
 
 const requestPasswordReset = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = sanitizeString((req.body.email || '').toLowerCase());
 
     if (!email) {
       return res.status(400).json({ message: 'Please provide an email' });
@@ -391,7 +393,8 @@ const requestPasswordReset = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   try {
-    const { email, code, newPassword } = req.body;
+    const email = sanitizeString((req.body.email || '').toLowerCase());
+    const { code, newPassword } = req.body;
 
     if (!email || !code || !newPassword) {
       return res.status(400).json({ message: 'Please provide email, verification code, and new password' });

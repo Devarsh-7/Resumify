@@ -29,6 +29,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // Security headers and payload compression
 app.use(helmet({
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   hsts: process.env.NODE_ENV === 'production' ? {
     maxAge: 31536000,
     includeSubDomains: true,

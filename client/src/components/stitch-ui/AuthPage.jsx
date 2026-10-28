@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import { AuthContext } from '../../context/AuthContext';
 
 const AuthPage = () => {
@@ -151,19 +151,29 @@ const AuthPage = () => {
           </div>
 
           {/* Google Sign-In Button */}
-          <div className="flex justify-center">
-            <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+          <div className="flex flex-col items-center justify-center">
+            {googleLoading ? (
+              <div className="flex items-center gap-3 py-3 px-6 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium text-sm">
+                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span>Signing in with Google...</span>
+              </div>
+            ) : (
               <GoogleLogin
                 onSuccess={async (credentialResponse) => {
+                  setError('');
+                  setGoogleLoading(true);
                   try {
                     await googleLogin(credentialResponse.credential);
                     navigate('/dashboard', { replace: true });
                   } catch (err) {
                     setError(err.response?.data?.message || 'Google sign-in failed');
+                  } finally {
+                    setGoogleLoading(false);
                   }
                 }}
                 onError={() => {
                   setError('Google sign-in failed. Please try again.');
+                  setGoogleLoading(false);
                 }}
                 theme="outline"
                 size="large"
@@ -171,7 +181,7 @@ const AuthPage = () => {
                 text="continue_with"
                 shape="pill"
               />
-            </GoogleOAuthProvider>
+            )}
           </div>
 
           <p className="mt-10 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
