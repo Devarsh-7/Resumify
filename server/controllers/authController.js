@@ -6,7 +6,7 @@ const { sendVerificationEmail } = require('../utils/sendEmail');
 const { logSecurityEvent } = require('../utils/logger');
 const { sanitizeString } = require('../utils/sanitizeInput');
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client((process.env.GOOGLE_CLIENT_ID || '').trim());
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -299,27 +299,29 @@ const googleLogin = async (req, res) => {
       return res.status(400).json({ message: 'Google credential is required' });
     }
 
+    const clientId = (process.env.GOOGLE_CLIENT_ID || '').trim();
     const ticket = await googleClient.verifyIdToken({
       idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: clientId,
     });
 
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
     const normalizedEmail = (email || '').toLowerCase().trim();
+    const displayName = (name || payload.given_name || (normalizedEmail ? normalizedEmail.split('@')[0] : 'User')).trim();
 
     let user = await User.findOne({ email: normalizedEmail });
 
     if (user) {
       if (user.authProvider === 'local' && !user.googleId) {
         user.googleId = googleId;
-        user.avatar = picture;
+        user.avatar = picture || user.avatar;
         user.isVerified = true;
         await user.save();
       }
     } else {
       user = await User.create({
-        name,
+        name: displayName,
         email: normalizedEmail,
         googleId,
         avatar: picture,
